@@ -9,12 +9,12 @@ export default function NavBar() {
     <header className="navbar">
       <Link to="/" className="navbar-brand">exam-os</Link>
       <nav className="navbar-links">
-        <Link to="/">Prüfungen</Link>
+        <Link to="/">Exams</Link>
         {isAdmin && <Link to="/admin">Admin</Link>}
       </nav>
       <div className="navbar-user">
         <span>{user.email}</span>
-        <button className="link-btn" onClick={signOut}>Abmelden</button>
+        <button className="link-btn" onClick={signOut}>Sign out</button>
       </div>
     </header>
   )

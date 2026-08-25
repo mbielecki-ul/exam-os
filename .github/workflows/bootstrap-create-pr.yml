@@ -1,4 +1,5 @@
 name: Bootstrap scaffold (push branch + PR with PAT)
+
 on:
   workflow_dispatch:
 permissions:
@@ -21,6 +22,7 @@ jobs:
           mkdir -p data/attempts
 
           cat > .gitignore <<'EOF'
+
 /node_modules
 .env
 .DS_Store

@@ -26,7 +26,7 @@ jobs:
       - name: Create .gitignore
         run: |
           if [ ! -f .gitignore ]; then
-            cat > .gitignore <<'EOF'
+            cat > .gitignore <<EOF
 /node_modules
 .env
 .DS_Store
@@ -40,7 +40,7 @@ EOF
       - name: Create package.json
         run: |
           if [ ! -f package.json ]; then
-            cat > package.json <<'EOF'
+            cat > package.json <<EOF
 {
   "name": "exam-os-actions",
   "version": "0.1.0",
@@ -268,6 +268,7 @@ EOF
           else
             echo "scripts/send-otp.js already exists, skipping"
           fi
+
       - name: Create scripts/verify-otp.js
         run: |
           if [ ! -f scripts/verify-otp.js ]; then
@@ -447,7 +448,7 @@ EOF
       - name: Create sample exam JSON
         run: |
           if [ ! -f data/questions/sample-exam.json ]; then
-            cat > data/questions/sample-exam.json <<'EOF'
+            cat > data/questions/sample-exam.json <<EOF
 {
   "slug": "sample-exam",
   "title": "Sample Exam",

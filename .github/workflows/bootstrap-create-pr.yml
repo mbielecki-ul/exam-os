@@ -1,7 +1,7 @@
 name: Bootstrap scaffold (push branch + PR with PAT)
-
 on:
   workflow_dispatch:
+
 permissions:
   contents: write
 
@@ -14,40 +14,35 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Create scaffold files
+      - name: Create directories and small files (safe printf)
         run: |
           mkdir -p scripts
           mkdir -p data/questions
           mkdir -p data/otps
           mkdir -p data/attempts
 
-          cat > .gitignore <<'EOF'
+          # write .gitignore safely
+          printf '%s\n' "/node_modules" ".env" ".DS_Store" "/*.log" "/data" > .gitignore
 
-/node_modules
-.env
-.DS_Store
-/*.log
-/data
-EOF
+          # write package.json safely
+          printf '%s\n' '{' \
+            '  "name": "exam-os-actions",' \
+            '  "version": "0.1.0",' \
+            '  "private": true,' \
+            '  "type": "module",' \
+            '  "scripts": {' \
+            '    "send-otp": "node scripts/send-otp.js",' \
+            '    "verify-otp": "node scripts/verify-otp.js",' \
+            '    "submit-attempt": "node scripts/submit-attempt.js"' \
+            '  },' \
+            '  "dependencies": {' \
+            '    "nodemailer": "^6.9.4",' \
+            '    "fs-extra": "^11.1.1"' \
+            '  }' \
+          '}' > package.json
 
-          cat > package.json <<'EOF'
-{
-  "name": "exam-os-actions",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "send-otp": "node scripts/send-otp.js",
-    "verify-otp": "node scripts/verify-otp.js",
-    "submit-attempt": "node scripts/submit-attempt.js"
-  },
-  "dependencies": {
-    "nodemailer": "^6.9.4",
-    "fs-extra": "^11.1.1"
-  }
-}
-EOF
-
+      - name: Create scripts/send-otp.js
+        run: |
           cat > scripts/send-otp.js <<'EOF'
 #!/usr/bin/env node
 import fs from 'fs-extra';
@@ -69,12 +64,19 @@ if (!email) {
   process.exit(1);
 }
 
+// generate 6-digit OTP
 const otp = ('' + Math.floor(100000 + Math.random() * 900000));
 const salt = crypto.randomBytes(16).toString('hex');
 const hash = crypto.createHmac('sha256', salt).update(otp).digest('hex');
 const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
 
-const otpRecord = { email, hash, salt, expiresAt, createdAt: new Date().toISOString() };
+const otpRecord = {
+  email,
+  hash,
+  salt,
+  expiresAt,
+  createdAt: new Date().toISOString()
+};
 
 const otpsDir = path.join(process.cwd(), 'data', 'otps');
 await fs.ensureDir(otpsDir);
@@ -83,6 +85,7 @@ const filePath = path.join(otpsDir, `${safeFileName}.json`);
 await fs.writeJson(filePath, otpRecord, { spaces: 2 });
 console.log(`Wrote OTP record to ${filePath}`);
 
+// send email via SMTP
 const smtpHost = process.env.SMTP_HOST;
 const smtpPort = process.env.SMTP_PORT || 587;
 const smtpUser = process.env.SMTP_USER;
@@ -112,6 +115,8 @@ try {
 }
 EOF
 
+      - name: Create scripts/verify-otp.js
+        run: |
           cat > scripts/verify-otp.js <<'EOF'
 #!/usr/bin/env node
 import fs from 'fs-extra';
@@ -155,6 +160,7 @@ if (hash !== otpRecord.hash) {
   process.exit(1);
 }
 
+// OTP valid. Create an attempt file with sampled questions
 const questionsDir = path.join(process.cwd(), 'data', 'questions');
 const examFile = path.join(questionsDir, `${examSlug}.json`);
 if (!fs.existsSync(examFile)) {
@@ -169,6 +175,7 @@ if (pool.length === 0) {
   process.exit(1);
 }
 
+// sample up to 50 questions
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -181,18 +188,34 @@ shuffle(poolCopy);
 const selected = poolCopy.slice(0, Math.min(50, poolCopy.length));
 
 const attemptId = crypto.randomUUID();
-const attempt = { id: attemptId, email, examSlug, questionIds: selected.map(q=>q.id), startedAt: new Date().toISOString(), finishedAt: null, answers: [], score: null };
+const attempt = {
+  id: attemptId,
+  email,
+  examSlug,
+  questionIds: selected.map(q=>q.id),
+  startedAt: new Date().toISOString(),
+  finishedAt: null,
+  answers: [],
+  score: null
+};
 
 const attemptsDir = path.join(process.cwd(), 'data', 'attempts');
 await fs.ensureDir(attemptsDir);
 const attemptPath = path.join(attemptsDir, `${attemptId}.json`);
 await fs.writeJson(attemptPath, attempt, { spaces: 2 });
+console.log('Created attempt', attemptId, '->', attemptPath);
+
+// invalidate OTP immediately
 otpRecord.used = true;
 await fs.writeJson(filePath, otpRecord, { spaces: 2 });
-console.log('Created attempt', attemptId);
+console.log('Marked OTP as used');
+
+// Optionally output attempt id to stdout for calling workflow to capture
 console.log(JSON.stringify({ attemptId }));
 EOF
 
+      - name: Create scripts/submit-attempt.js
+        run: |
           cat > scripts/submit-attempt.js <<'EOF'
 #!/usr/bin/env node
 import fs from 'fs-extra';
@@ -227,6 +250,7 @@ if (attempt.finishedAt) {
   process.exit(1);
 }
 
+// load questions
 const questionsFile = path.join(process.cwd(), 'data', 'questions', `${attempt.examSlug}.json`);
 const examData = await fs.readJson(questionsFile);
 const questionsById = {};
@@ -248,6 +272,7 @@ attempt.answers = detailed;
 attempt.score = Math.round((correctCount / attempt.questionIds.length) * 100);
 attempt.finishedAt = new Date().toISOString();
 
+// compute duration if startedAt exists
 if (attempt.startedAt) {
   const started = new Date(attempt.startedAt);
   const finished = new Date(attempt.finishedAt);
@@ -258,6 +283,8 @@ await fs.writeJson(attemptPath, attempt, { spaces: 2 });
 console.log('Graded attempt', attemptId, 'score=', attempt.score);
 EOF
 
+      - name: Create sample exam JSON
+        run: |
           cat > data/questions/sample-exam.json <<'EOF'
 {
   "slug": "sample-exam",
@@ -283,6 +310,10 @@ EOF
   ]
 }
 EOF
+
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/*.js || true
 
       - name: Commit branch and push using PAT
         env:

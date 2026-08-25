@@ -76,8 +76,8 @@ at `https://mbielecki-ul.github.io/exam-os/`.
   not configurable), then pick an exam.
 - **Admin** (`maximilian.bielecki@ul.com`): after logging in the same way,
   an **Admin** link appears in the nav. From there:
-  - **Ergebnisse**: every submitted result, filterable by exam.
-  - **Prüfungen & Fragen verwalten**: create new exams, activate/deactivate
+  - **Results**: every submitted result, filterable by exam.
+  - **Manage exams & questions**: create new exams, activate/deactivate
     them, and upload question pools as CSV or JSON (see `sample-questions.csv`
     / `sample-questions.json` for the exact format). Upload as many batches
     as you like — questions accumulate in the pool. Each exam attempt draws

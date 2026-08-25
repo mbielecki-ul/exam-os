@@ -1,0 +1,9 @@
+{
+  "slug":"sample-exam",
+  "title":"Sample Exam",
+  "description":"A small sample exam",
+  "questions": [
+    {"id":"q1","text":"What does HTTP stand for?","options":[{"id":"q1a","text":"HyperText Transfer Protocol","isCorrect":true},{"id":"q1b","text":"Hyperlink Transfer Protocol","isCorrect":false}]},
+    {"id":"q2","text":"Which port does HTTPS use by default?","options":[{"id":"q2a","text":"80","isCorrect":false},{"id":"q2b","text":"443","isCorrect":true}]}
+  ]
+}

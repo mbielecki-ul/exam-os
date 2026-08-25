@@ -1,0 +1,38 @@
+name: Verify OTP and Start Exam
+
+on:
+  repository_dispatch:
+    types: [verify-otp]
+
+permissions:
+  contents: write
+
+jobs:
+  verify_and_start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run verify-otp script
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: node scripts/verify-otp.js $GITHUB_EVENT_PATH
+
+      - name: Commit attempt files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/attempts || true
+          git commit -m "Add attempt (verify-otp)" || echo "no changes to commit"
+          git push || echo "push failed (check permissions)"

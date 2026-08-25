@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
@@ -9,6 +10,7 @@ import { auth } from '../lib/firebase'
 const STORAGE_KEY = 'examos-email-for-signin'
 
 export default function Login() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle') // idle | sending | sent | completing | error
   const [error, setError] = useState('')
@@ -29,14 +31,17 @@ export default function Login() {
     signInWithEmailLink(auth, storedEmail, window.location.href)
       .then(() => {
         window.localStorage.removeItem(STORAGE_KEY)
-        // Clean the sign-in params out of the URL.
+        // Clean the sign-in params out of the URL, then leave the login page —
+        // nothing else here was navigating away, which is why sign-in could
+        // finish successfully but the screen stayed stuck on "Completing …".
         window.history.replaceState({}, document.title, window.location.pathname)
+        navigate('/', { replace: true })
       })
       .catch((err) => {
         setStatus('error')
         setError(mapError(err))
       })
-  }, [])
+  }, [navigate])
 
   async function handleSubmit(e) {
     e.preventDefault()

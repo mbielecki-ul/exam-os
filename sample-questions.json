@@ -1,0 +1,17 @@
+[
+  {
+    "text": "Was ist die Hauptstadt von Österreich?",
+    "options": ["Salzburg", "Wien", "Graz", "Innsbruck"],
+    "correctIndex": 1
+  },
+  {
+    "text": "Wie viele Tage hat ein Schaltjahr?",
+    "options": ["365", "364", "366", "367"],
+    "correctIndex": 2
+  },
+  {
+    "text": "Welches Dokument regelt den Datenschutz in der EU?",
+    "options": ["DSGVO", "HGB", "BGB", "ISO 9001"],
+    "correctIndex": 0
+  }
+]

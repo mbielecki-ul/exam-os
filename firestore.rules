@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // Keep this in sync with ADMIN_EMAIL in src/lib/firebase.js
+      return isSignedIn() && request.auth.token.email == 'maximilian.bielecki@ul.com';
+    }
+
+    // Exams: any logged-in employee can read; only the admin can write.
+    match /exams/{examId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Questions: any logged-in employee can read (needed to render a quiz —
+    // note this means correctIndex is visible client-side; acceptable for an
+    // internal, low-stakes knowledge check, not a proctored/high-stakes exam).
+    // Only the admin can write.
+    match /questions/{questionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Results: an employee can create their own result and read their own
+    // history, but never read anyone else's or edit/delete results.
+    // The admin can read everything.
+    match /results/{resultId} {
+      allow create: if isSignedIn() && request.resource.data.userEmail == request.auth.token.email;
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userEmail == request.auth.token.email);
+      allow update, delete: if isAdmin();
+    }
+  }
+}

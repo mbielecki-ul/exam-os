@@ -1,0 +1,1 @@
+name: Bootstrap test on: workflow_dispatch: permissions: contents: write jobs: test: runs-on: ubuntu-latest steps: - uses: actions/checkout@v4 - run: echo "Bootstrap test workflow ran successfully"

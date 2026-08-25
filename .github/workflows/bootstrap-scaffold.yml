@@ -17,7 +17,6 @@ jobs:
 
       - name: Create directories
         run: |
-          mkdir -p .github/workflows
           mkdir -p scripts
           mkdir -p data/questions
           mkdir -p data/otps
@@ -26,7 +25,7 @@ jobs:
       - name: Create .gitignore
         run: |
           if [ ! -f .gitignore ]; then
-            cat > .gitignore <<EOF
+cat > .gitignore <<'EOF'
 /node_modules
 .env
 .DS_Store
@@ -40,7 +39,7 @@ EOF
       - name: Create package.json
         run: |
           if [ ! -f package.json ]; then
-            cat > package.json <<EOF
+cat > package.json <<'EOF'
 {
   "name": "exam-os-actions",
   "version": "0.1.0",
@@ -61,132 +60,10 @@ EOF
             echo "package.json already exists, skipping"
           fi
 
-      - name: Create send-otp workflow
-        run: |
-          if [ ! -f .github/workflows/send-otp.yml ]; then
-            cat > .github/workflows/send-otp.yml <<'EOF'
-name: Send OTP
-
-on:
-  repository_dispatch:
-    types: [send-otp]
-
-permissions:
-  contents: write
-
-jobs:
-  send_otp:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - run: npm ci
-      - name: Run send-otp script
-        env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-        run: node scripts/send-otp.js $GITHUB_EVENT_PATH
-      - name: Commit OTP files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/otps || true
-          git commit -m "Add OTP (send-otp)" || echo "no changes to commit"
-          git push
-EOF
-          else
-            echo "send-otp workflow already exists, skipping"
-          fi
-
-      - name: Create verify-otp workflow
-        run: |
-          if [ ! -f .github/workflows/verify-otp.yml ]; then
-            cat > .github/workflows/verify-otp.yml <<'EOF'
-name: Verify OTP and Start Exam
-
-on:
-  repository_dispatch:
-    types: [verify-otp]
-
-permissions:
-  contents: write
-
-jobs:
-  verify_and_start:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - run: npm ci
-      - name: Run verify-otp script
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        run: node scripts/verify-otp.js $GITHUB_EVENT_PATH
-      - name: Commit attempt files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/attempts || true
-          git commit -m "Add attempt (verify-otp)" || echo "no changes to commit"
-          git push
-EOF
-          else
-            echo "verify-otp workflow already exists, skipping"
-          fi
-
-      - name: Create submit-attempt workflow
-        run: |
-          if [ ! -f .github/workflows/submit-attempt.yml ]; then
-            cat > .github/workflows/submit-attempt.yml <<'EOF'
-name: Submit Attempt and Grade
-
-on:
-  repository_dispatch:
-    types: [submit-attempt]
-
-permissions:
-  contents: write
-
-jobs:
-  grade_attempt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - run: npm ci
-      - name: Run submit-attempt script
-        run: node scripts/submit-attempt.js $GITHUB_EVENT_PATH
-      - name: Commit graded attempt files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/attempts || true
-          git commit -m "Grade attempt (submit-attempt)" || echo "no changes to commit"
-          git push
-EOF
-          else
-            echo "submit-attempt workflow already exists, skipping"
-          fi
-
       - name: Create scripts/send-otp.js
         run: |
           if [ ! -f scripts/send-otp.js ]; then
-            cat > scripts/send-otp.js <<'EOF'
+cat > scripts/send-otp.js <<'EOF'
 #!/usr/bin/env node
 import fs from 'fs-extra';
 import path from 'path';
@@ -242,7 +119,7 @@ if (!smtpHost || !smtpUser || !smtpPass) {
 const transporter = nodemailer.createTransport({
   host: smtpHost,
   port: Number(smtpPort),
-  secure: Number(smtpPort) === 465, // true for 465, false for other ports
+  secure: Number(smtpPort) === 465,
   auth: {
     user: smtpUser,
     pass: smtpPass
@@ -272,7 +149,7 @@ EOF
       - name: Create scripts/verify-otp.js
         run: |
           if [ ! -f scripts/verify-otp.js ]; then
-            cat > scripts/verify-otp.js <<'EOF'
+cat > scripts/verify-otp.js <<'EOF'
 #!/usr/bin/env node
 import fs from 'fs-extra';
 import path from 'path';
@@ -330,7 +207,6 @@ if (pool.length === 0) {
   process.exit(1);
 }
 
-// sample up to 50 questions
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -365,7 +241,6 @@ otpRecord.used = true;
 await fs.writeJson(filePath, otpRecord, { spaces: 2 });
 console.log('Marked OTP as used');
 
-// Optionally output attempt id to stdout for calling workflow to capture
 console.log(JSON.stringify({ attemptId }));
 EOF
           else
@@ -375,7 +250,7 @@ EOF
       - name: Create scripts/submit-attempt.js
         run: |
           if [ ! -f scripts/submit-attempt.js ]; then
-            cat > scripts/submit-attempt.js <<'EOF'
+cat > scripts/submit-attempt.js <<'EOF'
 #!/usr/bin/env node
 import fs from 'fs-extra';
 import path from 'path';
@@ -409,7 +284,6 @@ if (attempt.finishedAt) {
   process.exit(1);
 }
 
-// load questions
 const questionsFile = path.join(process.cwd(), 'data', 'questions', `${attempt.examSlug}.json`);
 const examData = await fs.readJson(questionsFile);
 const questionsById = {};
@@ -431,7 +305,6 @@ attempt.answers = detailed;
 attempt.score = Math.round((correctCount / attempt.questionIds.length) * 100);
 attempt.finishedAt = new Date().toISOString();
 
-// compute duration if startedAt exists
 if (attempt.startedAt) {
   const started = new Date(attempt.startedAt);
   const finished = new Date(attempt.finishedAt);
@@ -448,7 +321,7 @@ EOF
       - name: Create sample exam JSON
         run: |
           if [ ! -f data/questions/sample-exam.json ]; then
-            cat > data/questions/sample-exam.json <<EOF
+cat > data/questions/sample-exam.json <<'EOF'
 {
   "slug": "sample-exam",
   "title": "Sample Exam",
@@ -515,8 +388,5 @@ EOF
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add . || true
-          git commit -m "Bootstrap scaffold: add workflows, scripts, sample data, package.json, .gitignore" || echo "no changes to commit"
+          git commit -m "Bootstrap scaffold: add scripts and sample data" || echo "no changes to commit"
           git push || echo "push failed"
-
-      - name: Done
-        run: echo "Bootstrap complete. Check repository for added scaffold files."

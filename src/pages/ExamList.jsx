@@ -20,12 +20,12 @@ export default function ExamList() {
   }, [user.email])
 
   if (error) return <div className="page"><p className="error-text">{error}</p></div>
-  if (exams === null) return <div className="page"><p>Lädt …</p></div>
+  if (exams === null) return <div className="page"><p>Loading …</p></div>
 
   return (
     <div className="page">
-      <h1>Verfügbare Prüfungen</h1>
-      {exams.length === 0 && <p>Aktuell ist keine Prüfung verfügbar.</p>}
+      <h1>Available exams</h1>
+      {exams.length === 0 && <p>No exam is available right now.</p>}
       <div className="exam-grid">
         {exams.map((exam) => {
           const attempts = ownResults.filter((r) => r.examId === exam.id)
@@ -39,10 +39,10 @@ export default function ExamList() {
               {exam.description && <p>{exam.description}</p>}
               {attempts.length > 0 && (
                 <p className="muted">
-                  {attempts.length}× absolviert · bestes Ergebnis {Math.round(best * 100)}%
+                  Taken {attempts.length}× · best score {Math.round(best * 100)}%
                 </p>
               )}
-              <Link className="button" to={`/exam/${exam.id}`}>Prüfung starten</Link>
+              <Link className="button" to={`/exam/${exam.id}`}>Start exam</Link>
             </div>
           )
         })}

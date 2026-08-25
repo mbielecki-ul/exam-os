@@ -24,11 +24,11 @@ export default function ExamTake() {
       try {
         const exams = await listAllExams()
         const found = exams.find((e) => e.id === examId)
-        if (!found) throw new Error('Prüfung nicht gefunden.')
+        if (!found) throw new Error('Exam not found.')
         setExam(found)
 
         const pool = await listQuestions(examId)
-        if (pool.length === 0) throw new Error('Für diese Prüfung sind keine Fragen hinterlegt.')
+        if (pool.length === 0) throw new Error('No questions have been set up for this exam yet.')
         setQuestions(pickRandomQuestions(pool, QUESTIONS_PER_EXAM))
       } catch (err) {
         setError(err.message)
@@ -76,14 +76,14 @@ export default function ExamTake() {
   }
 
   if (error) return <div className="page"><p className="error-text">{error}</p></div>
-  if (!exam || !questions) return <div className="page"><p>Lädt …</p></div>
+  if (!exam || !questions) return <div className="page"><p>Loading …</p></div>
 
   return (
     <div className="page exam-take">
       <div className="exam-take-header">
         <h1>{exam.name}</h1>
         <span className="muted">
-          Frage {current + 1} / {questions.length} · {answeredCount} beantwortet
+          Question {current + 1} / {questions.length} · {answeredCount} answered
         </span>
       </div>
 
@@ -106,24 +106,24 @@ export default function ExamTake() {
 
       <div className="exam-take-nav">
         <button disabled={current === 0} onClick={() => setCurrent((c) => c - 1)}>
-          Zurück
+          Back
         </button>
         {current < questions.length - 1 ? (
-          <button onClick={() => setCurrent((c) => c + 1)}>Weiter</button>
+          <button onClick={() => setCurrent((c) => c + 1)}>Next</button>
         ) : (
           <button
             className="button"
             disabled={submitting}
             onClick={handleSubmit}
           >
-            {submitting ? 'Wird gesendet …' : 'Prüfung abschließen'}
+            {submitting ? 'Submitting …' : 'Finish exam'}
           </button>
         )}
       </div>
 
       {answeredCount < questions.length && current === questions.length - 1 && (
         <p className="muted">
-          Hinweis: {questions.length - answeredCount} Frage(n) noch unbeantwortet.
+          Note: {questions.length - answeredCount} question(s) still unanswered.
         </p>
       )}
     </div>

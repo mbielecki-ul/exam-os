@@ -20,7 +20,7 @@ export default function Login() {
     let storedEmail = window.localStorage.getItem(STORAGE_KEY)
     if (!storedEmail) {
       storedEmail = window.prompt(
-        'Zur Bestätigung: Bitte gib deine E-Mail-Adresse erneut ein'
+        'To confirm: please enter your email address again'
       )
     }
     if (!storedEmail) return
@@ -57,19 +57,19 @@ export default function Login() {
   }
 
   if (status === 'completing') {
-    return <Shell><p>Anmeldung wird abgeschlossen …</p></Shell>
+    return <Shell><p>Completing sign-in …</p></Shell>
   }
 
   if (status === 'sent') {
     return (
       <Shell>
-        <h1>Link verschickt</h1>
+        <h1>Link sent</h1>
         <p>
-          Öffne dein Postfach für <strong>{email}</strong> und klicke auf den
-          Anmelde-Link. Der Link ist etwa eine Stunde gültig.
+          Check your inbox for <strong>{email}</strong> and click the sign-in
+          link. The link is valid for about an hour.
         </p>
         <button className="link-btn" onClick={() => setStatus('idle')}>
-          Andere E-Mail-Adresse verwenden
+          Use a different email address
         </button>
       </Shell>
     )
@@ -78,17 +78,17 @@ export default function Login() {
   return (
     <Shell>
       <h1>exam-os</h1>
-      <p className="subtitle">Melde dich mit deiner E-Mail-Adresse an.</p>
+      <p className="subtitle">Sign in with your email address.</p>
       <form onSubmit={handleSubmit} className="login-form">
         <input
           type="email"
           required
-          placeholder="name@firma.com"
+          placeholder="name@company.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <button type="submit" disabled={status === 'sending'}>
-          {status === 'sending' ? 'Wird gesendet …' : 'Anmelde-Link senden'}
+          {status === 'sending' ? 'Sending …' : 'Send sign-in link'}
         </button>
       </form>
       {error && <p className="error-text">{error}</p>}
@@ -105,8 +105,8 @@ function Shell({ children }) {
 }
 
 function mapError(err) {
-  if (err.code === 'auth/invalid-email') return 'Ungültige E-Mail-Adresse.'
+  if (err.code === 'auth/invalid-email') return 'Invalid email address.'
   if (err.code === 'auth/invalid-action-code')
-    return 'Dieser Link ist abgelaufen oder wurde bereits verwendet. Bitte fordere einen neuen an.'
-  return 'Etwas ist schiefgelaufen: ' + (err.message || 'Unbekannter Fehler')
+    return 'This link has expired or was already used. Please request a new one.'
+  return 'Something went wrong: ' + (err.message || 'Unknown error')
 }

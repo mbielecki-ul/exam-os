@@ -7,8 +7,8 @@ export default function ExamDone() {
     return (
       <div className="page-center">
         <div className="card">
-          <p>Keine Ergebnisdaten gefunden.</p>
-          <Link className="button" to="/">Zurück zur Übersicht</Link>
+          <p>No result data found.</p>
+          <Link className="button" to="/">Back to overview</Link>
         </div>
       </div>
     )
@@ -20,10 +20,10 @@ export default function ExamDone() {
   return (
     <div className="page-center">
       <div className="card login-card">
-        <h1>Prüfung abgeschlossen</h1>
-        <p className="score-display">{correctCount} / {total} richtig</p>
-        <p className="muted">{pct}% korrekt</p>
-        <Link className="button" to="/">Zurück zur Übersicht</Link>
+        <h1>Exam completed</h1>
+        <p className="score-display">{correctCount} / {total} correct</p>
+        <p className="muted">{pct}% correct</p>
+        <Link className="button" to="/">Back to overview</Link>
       </div>
     </div>
   )

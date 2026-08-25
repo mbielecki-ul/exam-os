@@ -44,7 +44,7 @@ export default function AdminQuestions() {
   }
 
   async function handleDelete(exam) {
-    if (!window.confirm(`Prüfung "${exam.name}" wirklich löschen? Fragen bleiben erhalten.`)) return
+    if (!window.confirm(`Really delete exam "${exam.name}"? Its questions will be kept.`)) return
     await deleteExam(exam.id)
     await refresh()
   }
@@ -62,38 +62,38 @@ export default function AdminQuestions() {
       [examId]: {
         status: errors.length > 0 ? 'partial' : 'ok',
         message:
-          `${questions.length} Frage(n) hinzugefügt.` +
-          (errors.length > 0 ? ` ${errors.length} Zeile(n) übersprungen.` : ''),
+          `${questions.length} question(s) added.` +
+          (errors.length > 0 ? ` ${errors.length} row(s) skipped.` : ''),
       },
     }))
     await refresh()
   }
 
   if (error) return <div className="page"><p className="error-text">{error}</p></div>
-  if (!exams) return <div className="page"><p>Lädt …</p></div>
+  if (!exams) return <div className="page"><p>Loading …</p></div>
 
   return (
     <div className="page">
       <div className="admin-header">
-        <h1>Prüfungen &amp; Fragen</h1>
-        <Link className="button" to="/admin">Zu den Ergebnissen</Link>
+        <h1>Exams &amp; Questions</h1>
+        <Link className="button" to="/admin">Back to results</Link>
       </div>
 
       <div className="card">
-        <h2>Neue Prüfung anlegen</h2>
+        <h2>Create a new exam</h2>
         <form onSubmit={handleCreateExam} className="new-exam-form">
           <input
-            placeholder="Name der Prüfung"
+            placeholder="Exam name"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             required
           />
           <input
-            placeholder="Beschreibung (optional)"
+            placeholder="Description (optional)"
             value={newDesc}
             onChange={(e) => setNewDesc(e.target.value)}
           />
-          <button type="submit" className="button">Anlegen</button>
+          <button type="submit" className="button">Create</button>
         </form>
       </div>
 
@@ -105,21 +105,21 @@ export default function AdminQuestions() {
                 <h2>{exam.name}</h2>
                 {exam.description && <p className="muted">{exam.description}</p>}
                 <p className="muted">
-                  {counts[exam.id] ?? '…'} Frage(n) im Pool ·{' '}
-                  {exam.active ? 'aktiv' : 'inaktiv'}
+                  {counts[exam.id] ?? '…'} question(s) in pool ·{' '}
+                  {exam.active ? 'active' : 'inactive'}
                 </p>
               </div>
               <div className="exam-admin-actions">
                 <button onClick={() => handleToggleActive(exam)}>
-                  {exam.active ? 'Deaktivieren' : 'Aktivieren'}
+                  {exam.active ? 'Deactivate' : 'Activate'}
                 </button>
-                <button onClick={() => handleDelete(exam)}>Löschen</button>
+                <button onClick={() => handleDelete(exam)}>Delete</button>
               </div>
             </div>
 
             <div className="upload-row">
               <label className="upload-label">
-                Fragen hochladen (CSV oder JSON)
+                Upload questions (CSV or JSON)
                 <input
                   type="file"
                   accept=".csv,.json"
@@ -141,10 +141,10 @@ export default function AdminQuestions() {
       </div>
 
       <div className="card">
-        <h2>Dateiformat</h2>
+        <h2>File format</h2>
         <p className="muted">
-          CSV-Spalten: <code>question,option1,option2,option3,option4,correctOption</code>{' '}
-          (correctOption = 1–4). JSON: Array von{' '}
+          CSV columns: <code>question,option1,option2,option3,option4,correctOption</code>{' '}
+          (correctOption = 1–4). JSON: array of{' '}
           <code>{'{ "text", "options": [4], "correctIndex": 0-3 }'}</code>.
         </p>
       </div>

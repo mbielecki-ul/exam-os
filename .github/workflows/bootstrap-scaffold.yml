@@ -1,0 +1,521 @@
+name: Bootstrap scaffold
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Create directories
+        run: |
+          mkdir -p .github/workflows
+          mkdir -p scripts
+          mkdir -p data/questions
+          mkdir -p data/otps
+          mkdir -p data/attempts
+
+      - name: Create .gitignore
+        run: |
+          if [ ! -f .gitignore ]; then
+            cat > .gitignore <<'EOF'
+/node_modules
+.env
+.DS_Store
+/*.log
+/data
+EOF
+          else
+            echo ".gitignore already exists, skipping"
+          fi
+
+      - name: Create package.json
+        run: |
+          if [ ! -f package.json ]; then
+            cat > package.json <<'EOF'
+{
+  "name": "exam-os-actions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "send-otp": "node scripts/send-otp.js",
+    "verify-otp": "node scripts/verify-otp.js",
+    "submit-attempt": "node scripts/submit-attempt.js"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.4",
+    "fs-extra": "^11.1.1"
+  }
+}
+EOF
+          else
+            echo "package.json already exists, skipping"
+          fi
+
+      - name: Create send-otp workflow
+        run: |
+          if [ ! -f .github/workflows/send-otp.yml ]; then
+            cat > .github/workflows/send-otp.yml <<'EOF'
+name: Send OTP
+
+on:
+  repository_dispatch:
+    types: [send-otp]
+
+permissions:
+  contents: write
+
+jobs:
+  send_otp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci
+      - name: Run send-otp script
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+        run: node scripts/send-otp.js $GITHUB_EVENT_PATH
+      - name: Commit OTP files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/otps || true
+          git commit -m "Add OTP (send-otp)" || echo "no changes to commit"
+          git push
+EOF
+          else
+            echo "send-otp workflow already exists, skipping"
+          fi
+
+      - name: Create verify-otp workflow
+        run: |
+          if [ ! -f .github/workflows/verify-otp.yml ]; then
+            cat > .github/workflows/verify-otp.yml <<'EOF'
+name: Verify OTP and Start Exam
+
+on:
+  repository_dispatch:
+    types: [verify-otp]
+
+permissions:
+  contents: write
+
+jobs:
+  verify_and_start:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci
+      - name: Run verify-otp script
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: node scripts/verify-otp.js $GITHUB_EVENT_PATH
+      - name: Commit attempt files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/attempts || true
+          git commit -m "Add attempt (verify-otp)" || echo "no changes to commit"
+          git push
+EOF
+          else
+            echo "verify-otp workflow already exists, skipping"
+          fi
+
+      - name: Create submit-attempt workflow
+        run: |
+          if [ ! -f .github/workflows/submit-attempt.yml ]; then
+            cat > .github/workflows/submit-attempt.yml <<'EOF'
+name: Submit Attempt and Grade
+
+on:
+  repository_dispatch:
+    types: [submit-attempt]
+
+permissions:
+  contents: write
+
+jobs:
+  grade_attempt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci
+      - name: Run submit-attempt script
+        run: node scripts/submit-attempt.js $GITHUB_EVENT_PATH
+      - name: Commit graded attempt files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/attempts || true
+          git commit -m "Grade attempt (submit-attempt)" || echo "no changes to commit"
+          git push
+EOF
+          else
+            echo "submit-attempt workflow already exists, skipping"
+          fi
+
+      - name: Create scripts/send-otp.js
+        run: |
+          if [ ! -f scripts/send-otp.js ]; then
+            cat > scripts/send-otp.js <<'EOF'
+#!/usr/bin/env node
+import fs from 'fs-extra';
+import path from 'path';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
+
+const eventPath = process.argv[2] || process.env.GITHUB_EVENT_PATH;
+if (!eventPath || !fs.existsSync(eventPath)) {
+  console.error('Missing GITHUB_EVENT_PATH or event file not provided');
+  process.exit(1);
+}
+
+const event = await fs.readJson(eventPath);
+const payload = event.client_payload || {};
+const email = (payload.email || '').toLowerCase();
+if (!email) {
+  console.error('No email provided in client_payload');
+  process.exit(1);
+}
+
+// generate 6-digit OTP
+const otp = ('' + Math.floor(100000 + Math.random() * 900000));
+const salt = crypto.randomBytes(16).toString('hex');
+const hash = crypto.createHmac('sha256', salt).update(otp).digest('hex');
+const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+
+const otpRecord = {
+  email,
+  hash,
+  salt,
+  expiresAt,
+  createdAt: new Date().toISOString()
+};
+
+const otpsDir = path.join(process.cwd(), 'data', 'otps');
+await fs.ensureDir(otpsDir);
+const safeFileName = email.replace(/[^a-z0-9@.\-]/gi, '_');
+const filePath = path.join(otpsDir, `${safeFileName}.json`);
+await fs.writeJson(filePath, otpRecord, { spaces: 2 });
+console.log(`Wrote OTP record to ${filePath}`);
+
+// send email via SMTP
+const smtpHost = process.env.SMTP_HOST;
+const smtpPort = process.env.SMTP_PORT || 587;
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASS;
+
+if (!smtpHost || !smtpUser || !smtpPass) {
+  console.warn('SMTP credentials not fully set. Skipping sending email. OTP is:', otp);
+  process.exit(0);
+}
+
+const transporter = nodemailer.createTransport({
+  host: smtpHost,
+  port: Number(smtpPort),
+  secure: Number(smtpPort) === 465, // true for 465, false for other ports
+  auth: {
+    user: smtpUser,
+    pass: smtpPass
+  }
+});
+
+const mailText = `Your exam login code is: ${otp}\n\nValid for 2 hours.`;
+
+try {
+  const res = await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: email,
+    subject: 'Your exam login code',
+    text: mailText
+  });
+  console.log('Email sent', res.messageId);
+} catch (err) {
+  console.error('Error sending email', err);
+  console.error('OTP for', email, 'is', otp);
+  process.exit(1);
+}
+EOF
+          else
+            echo "scripts/send-otp.js already exists, skipping"
+          fi
+      - name: Create scripts/verify-otp.js
+        run: |
+          if [ ! -f scripts/verify-otp.js ]; then
+            cat > scripts/verify-otp.js <<'EOF'
+#!/usr/bin/env node
+import fs from 'fs-extra';
+import path from 'path';
+import crypto from 'crypto';
+
+const eventPath = process.argv[2] || process.env.GITHUB_EVENT_PATH;
+if (!eventPath || !fs.existsSync(eventPath)) {
+  console.error('Missing GITHUB_EVENT_PATH or event file not provided');
+  process.exit(1);
+}
+
+const event = await fs.readJson(eventPath);
+const payload = event.client_payload || {};
+const email = (payload.email || '').toLowerCase();
+const code = (payload.code || '').toString();
+const examSlug = payload.exam_slug || 'sample-exam';
+
+if (!email || !code) {
+  console.error('Missing email or code in client_payload');
+  process.exit(1);
+}
+
+const otpsDir = path.join(process.cwd(), 'data', 'otps');
+const safeFileName = email.replace(/[^a-z0-9@.\-]/gi, '_');
+const filePath = path.join(otpsDir, `${safeFileName}.json`);
+if (!fs.existsSync(filePath)) {
+  console.error('No OTP found for', email);
+  process.exit(1);
+}
+
+const otpRecord = await fs.readJson(filePath);
+if (new Date(otpRecord.expiresAt) < new Date()) {
+  console.error('OTP expired');
+  process.exit(1);
+}
+
+const hash = crypto.createHmac('sha256', otpRecord.salt).update(code).digest('hex');
+if (hash !== otpRecord.hash) {
+  console.error('Invalid OTP code');
+  process.exit(1);
+}
+
+// OTP valid. Create an attempt file with sampled questions
+const questionsDir = path.join(process.cwd(), 'data', 'questions');
+const examFile = path.join(questionsDir, `${examSlug}.json`);
+if (!fs.existsSync(examFile)) {
+  console.error('Exam not found:', examSlug);
+  process.exit(1);
+}
+
+const examData = await fs.readJson(examFile);
+const pool = examData.questions || [];
+if (pool.length === 0) {
+  console.error('No questions in exam');
+  process.exit(1);
+}
+
+// sample up to 50 questions
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+}
+
+const poolCopy = [...pool];
+shuffle(poolCopy);
+const selected = poolCopy.slice(0, Math.min(50, poolCopy.length));
+
+const attemptId = crypto.randomUUID();
+const attempt = {
+  id: attemptId,
+  email,
+  examSlug,
+  questionIds: selected.map(q=>q.id),
+  startedAt: new Date().toISOString(),
+  finishedAt: null,
+  answers: [],
+  score: null
+};
+
+const attemptsDir = path.join(process.cwd(), 'data', 'attempts');
+await fs.ensureDir(attemptsDir);
+const attemptPath = path.join(attemptsDir, `${attemptId}.json`);
+await fs.writeJson(attemptPath, attempt, { spaces: 2 });
+console.log('Created attempt', attemptId, '->', attemptPath);
+
+// invalidate OTP immediately
+otpRecord.used = true;
+await fs.writeJson(filePath, otpRecord, { spaces: 2 });
+console.log('Marked OTP as used');
+
+// Optionally output attempt id to stdout for calling workflow to capture
+console.log(JSON.stringify({ attemptId }));
+EOF
+          else
+            echo "scripts/verify-otp.js already exists, skipping"
+          fi
+
+      - name: Create scripts/submit-attempt.js
+        run: |
+          if [ ! -f scripts/submit-attempt.js ]; then
+            cat > scripts/submit-attempt.js <<'EOF'
+#!/usr/bin/env node
+import fs from 'fs-extra';
+import path from 'path';
+
+const eventPath = process.argv[2] || process.env.GITHUB_EVENT_PATH;
+if (!eventPath || !fs.existsSync(eventPath)) {
+  console.error('Missing GITHUB_EVENT_PATH or event file not provided');
+  process.exit(1);
+}
+
+const event = await fs.readJson(eventPath);
+const payload = event.client_payload || {};
+const attemptId = payload.attemptId;
+const answers = payload.answers || [];
+
+if (!attemptId) {
+  console.error('No attemptId provided');
+  process.exit(1);
+}
+
+const attemptsDir = path.join(process.cwd(), 'data', 'attempts');
+const attemptPath = path.join(attemptsDir, `${attemptId}.json`);
+if (!fs.existsSync(attemptPath)) {
+  console.error('Attempt file not found:', attemptPath);
+  process.exit(1);
+}
+
+const attempt = await fs.readJson(attemptPath);
+if (attempt.finishedAt) {
+  console.error('Attempt already finished');
+  process.exit(1);
+}
+
+// load questions
+const questionsFile = path.join(process.cwd(), 'data', 'questions', `${attempt.examSlug}.json`);
+const examData = await fs.readJson(questionsFile);
+const questionsById = {};
+for (const q of examData.questions) questionsById[q.id] = q;
+
+let correctCount = 0;
+const detailed = [];
+for (const ans of answers) {
+  const q = questionsById[ans.questionId];
+  if (!q) continue;
+  const selected = q.options.find(o=>o.id === ans.selectedOptionId);
+  const correctOption = q.options.find(o=>o.isCorrect);
+  const correct = selected && selected.id === correctOption.id;
+  if (correct) correctCount++;
+  detailed.push({ questionId: q.id, selectedOptionId: (selected? selected.id : null), correct, timeTaken: ans.timeTaken || null });
+}
+
+attempt.answers = detailed;
+attempt.score = Math.round((correctCount / attempt.questionIds.length) * 100);
+attempt.finishedAt = new Date().toISOString();
+
+// compute duration if startedAt exists
+if (attempt.startedAt) {
+  const started = new Date(attempt.startedAt);
+  const finished = new Date(attempt.finishedAt);
+  attempt.durationSeconds = Math.round((finished - started) / 1000);
+}
+
+await fs.writeJson(attemptPath, attempt, { spaces: 2 });
+console.log('Graded attempt', attemptId, 'score=', attempt.score);
+EOF
+          else
+            echo "scripts/submit-attempt.js already exists, skipping"
+          fi
+
+      - name: Create sample exam JSON
+        run: |
+          if [ ! -f data/questions/sample-exam.json ]; then
+            cat > data/questions/sample-exam.json <<'EOF'
+{
+  "slug": "sample-exam",
+  "title": "Sample Exam",
+  "description": "A small sample exam with multiple choice questions.",
+  "questions": [
+    {
+      "id": "q1",
+      "text": "What does HTTP stand for?",
+      "options": [
+        { "id": "q1a", "text": "HyperText Transfer Protocol", "isCorrect": true },
+        { "id": "q1b", "text": "Hyperlink Transfer Protocol", "isCorrect": false },
+        { "id": "q1c", "text": "HyperText Transmission Protocol", "isCorrect": false }
+      ]
+    },
+    {
+      "id": "q2",
+      "text": "Which port does HTTPS use by default?",
+      "options": [
+        { "id": "q2a", "text": "80", "isCorrect": false },
+        { "id": "q2b", "text": "443", "isCorrect": true },
+        { "id": "q2c", "text": "22", "isCorrect": false }
+      ]
+    },
+    {
+      "id": "q3",
+      "text": "Which HTTP method is typically used to update a resource?",
+      "options": [
+        { "id": "q3a", "text": "GET", "isCorrect": false },
+        { "id": "q3b", "text": "PUT", "isCorrect": true },
+        { "id": "q3c", "text": "DELETE", "isCorrect": false }
+      ]
+    },
+    {
+      "id": "q4",
+      "text": "What is the correct MIME type for JSON?",
+      "options": [
+        { "id": "q4a", "text": "text/json", "isCorrect": false },
+        { "id": "q4b", "text": "application/json", "isCorrect": true },
+        { "id": "q4c", "text": "application/javascript", "isCorrect": false }
+      ]
+    },
+    {
+      "id": "q5",
+      "text": "Which of these is a symmetric encryption algorithm?",
+      "options": [
+        { "id": "q5a", "text": "RSA", "isCorrect": false },
+        { "id": "q5b", "text": "AES", "isCorrect": true },
+        { "id": "q5c", "text": "DSA", "isCorrect": false }
+      ]
+    }
+  ]
+}
+EOF
+          else
+            echo "sample-exam.json already exists, skipping"
+          fi
+
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/*.js || true
+
+      - name: Commit scaffold
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add . || true
+          git commit -m "Bootstrap scaffold: add workflows, scripts, sample data, package.json, .gitignore" || echo "no changes to commit"
+          git push || echo "push failed"
+
+      - name: Done
+        run: echo "Bootstrap complete. Check repository for added scaffold files."

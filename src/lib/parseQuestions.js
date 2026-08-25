@@ -14,9 +14,9 @@ function parseJson(text) {
   try {
     raw = JSON.parse(text)
   } catch (e) {
-    return { questions: [], errors: ['Ungültiges JSON: ' + e.message] }
+    return { questions: [], errors: ['Invalid JSON: ' + e.message] }
   }
-  if (!Array.isArray(raw)) return { questions: [], errors: ['JSON muss ein Array von Fragen sein.'] }
+  if (!Array.isArray(raw)) return { questions: [], errors: ['JSON must be an array of questions.'] }
 
   const questions = []
   raw.forEach((row, i) => {
@@ -29,7 +29,7 @@ function parseJson(text) {
 
 function parseCsv(text) {
   const parsed = Papa.parse(text.trim(), { header: true, skipEmptyLines: true })
-  const errors = parsed.errors.map((e) => `Zeile ${e.row}: ${e.message}`)
+  const errors = parsed.errors.map((e) => `Row ${e.row}: ${e.message}`)
 
   const questions = []
   parsed.data.forEach((row, i) => {
@@ -45,11 +45,11 @@ function parseCsv(text) {
 
 function normalize(text, options, correctIndex, i) {
   if (!text || !Array.isArray(options) || options.some((o) => !o) || options.length !== 4) {
-    return { error: `Zeile ${i + 1}: Frage benötigt Text und genau 4 Antwortoptionen.` }
+    return { error: `Row ${i + 1}: question needs text and exactly 4 answer options.` }
   }
   const idx = Number(correctIndex)
   if (Number.isNaN(idx) || idx < 0 || idx > 3) {
-    return { error: `Zeile ${i + 1}: correctIndex/correctOption ungültig.` }
+    return { error: `Row ${i + 1}: correctIndex/correctOption is invalid.` }
   }
   return { question: { text: text.trim(), options: options.map((o) => String(o).trim()), correctIndex: idx } }
 }

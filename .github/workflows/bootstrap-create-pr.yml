@@ -13,6 +13,7 @@ jobs:
       - name: Create branch, files and PR (via GitHub API)
         uses: actions/github-script@v6
         with:
+          github-token: ${{ secrets.PERSONAL_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
 

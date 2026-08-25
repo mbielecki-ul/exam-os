@@ -1,8 +1,10 @@
-name: Bootstrap test
+name: Bootstrap
+
 on:
   workflow_dispatch:
 permissions:
   contents: write
+  
 jobs:
   test:
     runs-on: ubuntu-latest

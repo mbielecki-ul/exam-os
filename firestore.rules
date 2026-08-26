@@ -8,8 +8,11 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Keep this in sync with ADMIN_EMAIL in src/lib/firebase.js
-      return isSignedIn() && request.auth.token.email == 'maximilian.bielecki@ul.com';
+      // Keep this list in sync with ADMIN_EMAILS in src/lib/firebase.js
+      return isSignedIn() && request.auth.token.email in [
+        'maximilian.bielecki@ul.com',
+        'max@bielecki.at'
+      ];
     }
 
     // Exams: any logged-in employee can read; only the admin can write.

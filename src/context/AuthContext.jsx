@@ -2,8 +2,6 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth'
 import { auth, ADMIN_EMAILS } from '../lib/firebase'
 
-isAdmin: !!user && ADMIN_EMAILS.includes(user.email),
-
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
@@ -17,7 +15,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading: user === undefined,
-    isAdmin: !!user && user.email === ADMIN_EMAIL,
+    isAdmin: !!user && ADMIN_EMAILS.includes(user.email),
     signOut: () => fbSignOut(auth),
   }
 

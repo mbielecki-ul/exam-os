@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth'
-import { auth, ADMIN_EMAIL } from '../lib/firebase'
+import { auth, ADMIN_EMAILS } from '../lib/firebase'
+
+isAdmin: !!user && ADMIN_EMAILS.includes(user.email),
 
 const AuthContext = createContext(null)
 

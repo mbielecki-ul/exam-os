@@ -8,6 +8,7 @@ import ExamTake from './pages/ExamTake'
 import ExamDone from './pages/ExamDone'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminQuestions from './pages/AdminQuestions'
+import AdminQuestionEditor from './pages/AdminQuestionEditor'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/exam/:examId/done" element={<RequireAuth><ExamDone /></RequireAuth>} />
           <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
           <Route path="/admin/questions" element={<RequireAdmin><AdminQuestions /></RequireAdmin>} />
+          <Route path="/admin/questions/:examId" element={<RequireAdmin><AdminQuestionEditor /></RequireAdmin>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

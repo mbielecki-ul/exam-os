@@ -11,6 +11,7 @@ export async function submitResult({
   totalQuestions,
   correctCount,
   answers,
+  autoSubmitted = false,
 }) {
   const durationSeconds = Math.round((Date.now() - startedAtMs) / 1000)
   await addDoc(collection(db, RESULTS), {
@@ -23,6 +24,7 @@ export async function submitResult({
     totalQuestions,
     correctCount,
     answers, // [{ questionId, selectedIndex, correct }]
+    autoSubmitted, // true when the time limit ran out
   })
 }
 

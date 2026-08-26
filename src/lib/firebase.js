@@ -19,4 +19,4 @@ export const auth = getAuth(app)
 export const db = getFirestore(app)
 
 // Hardcoded admin email — kept in one place, also mirrored in firestore.rules.
-export const ADMIN_EMAIL = 'maximilian.bielecki@ul.com'
+export const ADMIN_EMAILS = ['maximilian.bielecki@ul.com', 'max@bielecki.at', 'thomas.reznicke@ul.com']

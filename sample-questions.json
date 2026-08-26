@@ -2,16 +2,19 @@
   {
     "text": "What is the capital of Austria?",
     "options": ["Salzburg", "Vienna", "Graz", "Innsbruck"],
-    "correctIndex": 1
+    "correctIndex": 1,
+    "category": "General Knowledge"
   },
   {
     "text": "How many days does a leap year have?",
     "options": ["365", "364", "366", "367"],
-    "correctIndex": 2
+    "correctIndex": 2,
+    "category": "General Knowledge"
   },
   {
     "text": "Which regulation governs data protection in the EU?",
     "options": ["GDPR", "HGB", "BGB", "ISO 9001"],
-    "correctIndex": 0
+    "correctIndex": 0,
+    "category": "Compliance"
   }
 ]

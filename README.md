@@ -31,9 +31,10 @@ firebase deploy --only firestore:rules
 ```
 
 This applies `firestore.rules`, which hardcodes `maximilian.bielecki@ul.com`
-as the only admin identity able to write exams/questions and read all
-results. If you ever need a second admin, add another `||` condition to
-the `isAdmin()` function in that file.
+and `max@bielecki.at` as the only admin identities able to write
+exams/questions and read all results. If you ever need another admin,
+add another entry to the list in the `isAdmin()` function in that file
+(and to `ADMIN_EMAILS` in `src/lib/firebase.js`).
 
 ### 3. Enable GitHub Pages
 
@@ -74,15 +75,21 @@ at `https://mbielecki-ul.github.io/exam-os/`.
 - **Employees**: open the URL, enter their email, click the link Firebase
   emails them (valid roughly 1 hour — this is a Firebase-controlled limit,
   not configurable), then pick an exam.
-- **Admin** (`maximilian.bielecki@ul.com`): after logging in the same way,
+- **Admin** (`maximilian.bielecki@ul.com` or `max@bielecki.at`): after logging in the same way,
   an **Admin** link appears in the nav. From there:
   - **Results**: every submitted result, filterable by exam.
   - **Manage exams & questions**: create new exams, activate/deactivate
-    them, and upload question pools as CSV or JSON (see `sample-questions.csv`
-    / `sample-questions.json` for the exact format). Upload as many batches
+    them, and upload question pools as CSV, Excel (`.xlsx`), or JSON (see
+    `sample-questions.csv` / `sample-questions.xlsx` / `sample-questions.json`
+    for the exact format, each question can carry an optional `category`).
+    Upload as many batches
     as you like — questions accumulate in the pool. Each exam attempt draws
     50 random questions from whatever's currently in that exam's pool (or
     fewer, if the pool has less than 50).
+  - **Manage questions** (per exam, from the exams list): view every
+    question one by one, filter by category, edit a question's text,
+    options, correct answer, or category in place, add a single question
+    manually, or delete one — no re-upload needed for small fixes.
 
 ## Local development
 

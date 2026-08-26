@@ -1,4 +1,4 @@
-question,option1,option2,option3,option4,correctOption
-What is the capital of Austria?,Salzburg,Vienna,Graz,Innsbruck,2
-How many days does a leap year have?,365,364,366,367,3
-Which regulation governs data protection in the EU?,GDPR,HGB,BGB,ISO 9001,1
+question,option1,option2,option3,option4,correctOption,category
+What is the capital of Austria?,Salzburg,Vienna,Graz,Innsbruck,2,General Knowledge
+How many days does a leap year have?,365,364,366,367,3,General Knowledge
+Which regulation governs data protection in the EU?,GDPR,HGB,BGB,ISO 9001,1,Compliance

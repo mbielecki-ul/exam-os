@@ -180,6 +180,14 @@ input, select {
   justify-content: space-between;
   align-items: baseline;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.exam-take-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .question-card {
@@ -289,6 +297,31 @@ input, select {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+}
+
+.time-limit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.time-limit-input {
+  width: 5rem;
+}
+
+.exam-timer {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.exam-timer-low {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .upload-label {

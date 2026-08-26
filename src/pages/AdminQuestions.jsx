@@ -50,8 +50,7 @@ export default function AdminQuestions() {
   }
 
   async function handleFileUpload(examId, file) {
-    const text = await file.text()
-    const { questions, errors } = parseQuestionFile(file.name, text)
+    const { questions, errors } = await parseQuestionFile(file)
 
     if (questions.length > 0) {
       await addQuestions(examId, questions)
@@ -110,6 +109,7 @@ export default function AdminQuestions() {
                 </p>
               </div>
               <div className="exam-admin-actions">
+                <Link className="button" to={`/admin/questions/${exam.id}`}>Manage questions</Link>
                 <button onClick={() => handleToggleActive(exam)}>
                   {exam.active ? 'Deactivate' : 'Activate'}
                 </button>
@@ -119,10 +119,10 @@ export default function AdminQuestions() {
 
             <div className="upload-row">
               <label className="upload-label">
-                Upload questions (CSV or JSON)
+                Upload questions (CSV, Excel, or JSON)
                 <input
                   type="file"
-                  accept=".csv,.json"
+                  accept=".csv,.json,.xlsx,.xls"
                   onChange={(e) => {
                     const file = e.target.files[0]
                     if (file) handleFileUpload(exam.id, file)
@@ -143,9 +143,10 @@ export default function AdminQuestions() {
       <div className="card">
         <h2>File format</h2>
         <p className="muted">
-          CSV columns: <code>question,option1,option2,option3,option4,correctOption</code>{' '}
-          (correctOption = 1–4). JSON: array of{' '}
-          <code>{'{ "text", "options": [4], "correctIndex": 0-3 }'}</code>.
+          CSV/Excel columns: <code>question,option1,option2,option3,option4,correctOption,category</code>{' '}
+          (correctOption = 1–4, category is optional text). JSON: array of{' '}
+          <code>{'{ "text", "options": [4], "correctIndex": 0-3, "category": "..." }'}</code>.
+          Download <code>sample-questions.xlsx</code> in the repo for a working example.
         </p>
       </div>
     </div>

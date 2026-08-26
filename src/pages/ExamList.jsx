@@ -37,6 +37,9 @@ export default function ExamList() {
             <div key={exam.id} className="card exam-card">
               <h2>{exam.name}</h2>
               {exam.description && <p>{exam.description}</p>}
+              {exam.timeLimitMinutes && (
+                <p className="muted">Time limit: {exam.timeLimitMinutes} minutes</p>
+              )}
               {attempts.length > 0 && (
                 <p className="muted">
                   Taken {attempts.length}× · best score {Math.round(best * 100)}%

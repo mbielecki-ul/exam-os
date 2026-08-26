@@ -4,6 +4,7 @@ import {
   listAllExams,
   createExam,
   setExamActive,
+  updateExamTimeLimit,
   deleteExam,
   countQuestions,
   addQuestions,
@@ -15,6 +16,8 @@ export default function AdminQuestions() {
   const [counts, setCounts] = useState({})
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  const [newTimeLimit, setNewTimeLimit] = useState('60')
+  const [timeLimitDrafts, setTimeLimitDrafts] = useState({}) // examId -> string being edited
   const [uploadTarget, setUploadTarget] = useState({}) // examId -> {status, message}
   const [error, setError] = useState('')
 
@@ -32,9 +35,26 @@ export default function AdminQuestions() {
   async function handleCreateExam(e) {
     e.preventDefault()
     if (!newName.trim()) return
-    await createExam({ name: newName.trim(), description: newDesc.trim() })
+    await createExam({
+      name: newName.trim(),
+      description: newDesc.trim(),
+      timeLimitMinutes: newTimeLimit,
+    })
     setNewName('')
     setNewDesc('')
+    setNewTimeLimit('60')
+    await refresh()
+  }
+
+  async function handleSaveTimeLimit(examId) {
+    const value = timeLimitDrafts[examId]
+    if (!value || Number(value) <= 0) return
+    await updateExamTimeLimit(examId, value)
+    setTimeLimitDrafts((prev) => {
+      const next = { ...prev }
+      delete next[examId]
+      return next
+    })
     await refresh()
   }
 
@@ -92,6 +112,15 @@ export default function AdminQuestions() {
             value={newDesc}
             onChange={(e) => setNewDesc(e.target.value)}
           />
+          <input
+            type="number"
+            min="1"
+            placeholder="Time limit (minutes)"
+            value={newTimeLimit}
+            onChange={(e) => setNewTimeLimit(e.target.value)}
+            required
+            style={{ maxWidth: '11rem' }}
+          />
           <button type="submit" className="button">Create</button>
         </form>
       </div>
@@ -107,6 +136,27 @@ export default function AdminQuestions() {
                   {counts[exam.id] ?? '…'} question(s) in pool ·{' '}
                   {exam.active ? 'active' : 'inactive'}
                 </p>
+                <div className="time-limit-row">
+                  <label className="muted">
+                    Time limit (minutes):{' '}
+                    <input
+                      type="number"
+                      min="1"
+                      className="time-limit-input"
+                      value={timeLimitDrafts[exam.id] ?? exam.timeLimitMinutes ?? ''}
+                      placeholder="none set"
+                      onChange={(e) =>
+                        setTimeLimitDrafts((prev) => ({ ...prev, [exam.id]: e.target.value }))
+                      }
+                    />
+                  </label>
+                  {timeLimitDrafts[exam.id] !== undefined && (
+                    <button onClick={() => handleSaveTimeLimit(exam.id)}>Save</button>
+                  )}
+                  {!exam.timeLimitMinutes && timeLimitDrafts[exam.id] === undefined && (
+                    <span className="error-text">No time limit set yet — exam will run unlimited.</span>
+                  )}
+                </div>
               </div>
               <div className="exam-admin-actions">
                 <Link className="button" to={`/admin/questions/${exam.id}`}>Manage questions</Link>

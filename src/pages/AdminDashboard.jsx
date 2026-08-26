@@ -52,6 +52,7 @@ export default function AdminDashboard() {
             <th>Exam</th>
             <th>Score</th>
             <th>Duration</th>
+            <th>Status</th>
             <th>Submitted</th>
           </tr>
         </thead>
@@ -65,6 +66,7 @@ export default function AdminDashboard() {
                 {Math.round((r.correctCount / r.totalQuestions) * 100)}%)
               </td>
               <td>{formatDuration(r.durationSeconds)}</td>
+              <td>{r.autoSubmitted ? 'Timed out' : 'Submitted'}</td>
               <td>{formatTimestamp(r.submittedAt)}</td>
             </tr>
           ))}

@@ -78,7 +78,10 @@ at `https://mbielecki-ul.github.io/exam-os/`.
 - **Admin** (`maximilian.bielecki@ul.com` or `max@bielecki.at`): after logging in the same way,
   an **Admin** link appears in the nav. From there:
   - **Results**: every submitted result, filterable by exam.
-  - **Manage exams & questions**: create new exams, activate/deactivate
+  - **Manage exams & questions**: create new exams (each needs a time limit
+    in minutes — shown to employees as a countdown once they start, and
+    enforced: when it reaches zero the exam auto-submits and every
+    unanswered question counts as incorrect), activate/deactivate
     them, and upload question pools as CSV, Excel (`.xlsx`), or JSON (see
     `sample-questions.csv` / `sample-questions.xlsx` / `sample-questions.json`
     for the exact format, each question can carry an optional `category`).

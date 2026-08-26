@@ -53,7 +53,7 @@ export async function listQuestions(examId) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
-// questions: [{ text, options: [4 strings], correctIndex: 0-3 }]
+// questions: [{ text, options: [4 strings], correctIndex: 0-3, category: string }]
 export async function addQuestions(examId, questions) {
   // Firestore batches are capped at 500 writes.
   const chunks = []
@@ -68,11 +68,27 @@ export async function addQuestions(examId, questions) {
         text: q.text,
         options: q.options,
         correctIndex: q.correctIndex,
+        category: q.category || 'Uncategorized',
         createdAt: serverTimestamp(),
       })
     }
     await batch.commit()
   }
+}
+
+// Adds a single question, e.g. from the manual "add question" form.
+export async function addQuestion(examId, question) {
+  await addQuestions(examId, [question])
+}
+
+// question: { text, options: [4 strings], correctIndex: 0-3, category: string }
+export async function updateQuestion(questionId, question) {
+  await updateDoc(doc(db, QUESTIONS, questionId), {
+    text: question.text,
+    options: question.options,
+    correctIndex: question.correctIndex,
+    category: question.category || 'Uncategorized',
+  })
 }
 
 export async function deleteQuestion(questionId) {

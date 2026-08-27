@@ -74,7 +74,9 @@ at `https://mbielecki-ul.github.io/exam-os/`.
 
 - **Employees**: open the URL, enter their email, click the link Firebase
   emails them (valid roughly 1 hour — this is a Firebase-controlled limit,
-  not configurable), then pick an exam.
+  not configurable), then pick an exam. **Each exam can only be taken once
+  per person** — this is enforced in `firestore.rules`, not just hidden in
+  the UI, so it can't be bypassed by re-visiting the URL.
 - **Admin** (`maximilian.bielecki@ul.com` or `max@bielecki.at`): after logging in the same way,
   an **Admin** link appears in the nav. From there:
   - **Results**: every submitted result, filterable by exam.
@@ -89,6 +91,10 @@ at `https://mbielecki-ul.github.io/exam-os/`.
     as you like — questions accumulate in the pool. Each exam attempt draws
     50 random questions from whatever's currently in that exam's pool (or
     fewer, if the pool has less than 50).
+  - **View overview** (per exam, from the exams list): attendee count,
+    total correct/wrong answers across everyone, how many passed vs.
+    failed (pass threshold is 66% correct, see `PASS_THRESHOLD` in
+    `src/lib/results.js`), and a per-attendee breakdown table.
   - **Manage questions** (per exam, from the exams list): view every
     question one by one, filter by category, edit a question's text,
     options, correct answer, or category in place, add a single question

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
@@ -9,10 +9,19 @@ export default function NavBar() {
 
   return (
     <header className="navbar">
-      <Link to="/" className="navbar-brand">exam-os</Link>
+      <NavLink to="/" end className="navbar-brand">
+        <Logo />
+        <span>exam-os</span>
+      </NavLink>
       <nav className="navbar-links">
-        <Link to="/">Exams</Link>
-        {isAdmin && <Link to="/admin">Admin</Link>}
+        <NavLink to="/" end className={({ isActive }) => 'nav-link' + (isActive ? ' nav-link-active' : '')}>
+          Exams
+        </NavLink>
+        {isAdmin && (
+          <NavLink to="/admin" className={({ isActive }) => 'nav-link' + (isActive ? ' nav-link-active' : '')}>
+            Admin
+          </NavLink>
+        )}
       </nav>
       <div className="navbar-user">
         <button
@@ -27,5 +36,20 @@ export default function NavBar() {
         <button className="link-btn" onClick={signOut}>Sign out</button>
       </div>
     </header>
+  )
+}
+
+function Logo() {
+  return (
+    <svg className="navbar-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="32" height="32" rx="8" fill="var(--accent)" />
+      <path
+        d="M9 16.5L14 21L23 11"
+        stroke="var(--bg)"
+        strokeWidth="2.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }

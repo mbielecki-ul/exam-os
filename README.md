@@ -94,7 +94,8 @@ at `https://mbielecki-ul.github.io/exam-os/`.
   - **View overview** (per exam, from the exams list): attendee count,
     total correct/wrong answers across everyone, how many passed vs.
     failed (pass threshold is 66% correct, see `PASS_THRESHOLD` in
-    `src/lib/results.js`), and a per-attendee breakdown table.
+    `src/lib/results.js`), bar charts for attendance/pass-rate and
+    correct-vs-wrong answers, and a per-attendee breakdown table.
   - **Manage questions** (per exam, from the exams list): view every
     question one by one, filter by category, edit a question's text,
     options, correct answer, or category in place, add a single question

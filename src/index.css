@@ -260,6 +260,17 @@ input, select {
   margin-bottom: 1.5rem;
 }
 
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.chart-grid .card {
+  overflow-x: auto;
+}
+
 .stat-card {
   margin-bottom: 0;
   text-align: center;

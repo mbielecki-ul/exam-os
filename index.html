@@ -1,31 +1,540 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>exam-os</title>
-    <script>
-      // Single Page Apps for GitHub Pages
-      // https://github.com/rafgraph/spa-github-pages
-      // Reverses the encoding done in 404.html so React Router sees the
-      // original path (e.g. /exam-os/login?apiKey=...&oobCode=...).
-      (function (l) {
-        if (l.search[1] === '/') {
-          var decoded = l.search
-            .slice(1)
-            .split('&')
-            .map(function (s) {
-              return s.replace(/~and~/g, '&')
-            })
-            .join('?')
-          window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash)
-        }
-      })(window.location)
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0e1116;
+  --bg-elevated: #161b22;
+  --border: #2a303c;
+  --text: #e6e8eb;
+  --muted: #8b93a1;
+  --accent: #5fd0a3;
+  --accent-dim: #3a6f5a;
+  --danger: #e5786d;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #f4f5f7;
+  --bg-elevated: #ffffff;
+  --border: #d7dbe2;
+  --text: #1a1d21;
+  --muted: #5b6472;
+  --accent: #2f9e6e;
+  --accent-dim: #bfe9d7;
+  --danger: #c0392b;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--bg-elevated);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+button, .button {
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: var(--accent);
+  color: #0e1116;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.1rem;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:not(.button):not(.option-btn) {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0;
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
+input, select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.login-card {
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.error-text {
+  color: var(--danger);
+  margin-top: 0.75rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0.3rem 0.4rem;
+  margin: -0.3rem -0.4rem;
+  transition: background 0.15s ease;
+}
+
+.navbar-brand:hover {
+  background: var(--bg-elevated);
+}
+
+.navbar-logo {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.nav-link {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+
+.nav-link-active {
+  color: var(--bg);
+  background: var(--accent);
+  font-weight: 500;
+}
+
+.nav-link-active:hover {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: transparent;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.theme-toggle {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exam-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.exam-card h2 {
+  font-size: 1.1rem;
+}
+
+.badge-done {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.chart-grid .card {
+  overflow-x: auto;
+}
+
+.stat-card {
+  margin-bottom: 0;
+  text-align: center;
+}
+
+.stat-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0.25rem 0;
+}
+
+.stat-value-accent {
+  color: var(--accent);
+}
+
+.stat-sub {
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.pass-text {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.fail-text {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.exam-take-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.exam-take-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.question-card {
+  min-height: 220px;
+}
+
+.question-text {
+  font-size: 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+.option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.option-btn {
+  text-align: left;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.option-selected {
+  border-color: var(--accent);
+  background: rgba(95, 208, 163, 0.12);
+}
+
+.exam-take-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+
+.score-display {
+  font-size: 2rem;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--accent);
+  margin: 1rem 0 0.25rem;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.results-table th, .results-table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.results-table th {
+  color: var(--muted);
+  font-weight: 500;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.new-exam-form {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.new-exam-form input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.exam-admin-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.exam-admin-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.upload-row {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.time-limit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.time-limit-input {
+  width: 5rem;
+}
+
+.exam-timer {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.exam-timer-low {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.question-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.category-tag {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.option-preview-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.option-preview-list li {
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.option-correct {
+  border-color: var(--accent) !important;
+  color: var(--accent);
+}
+
+.question-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field-label textarea, .field-label input {
+  font-family: inherit;
+}
+
+.options-edit-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.option-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.option-edit-input {
+  flex: 1;
+}

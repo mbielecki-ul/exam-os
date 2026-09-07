@@ -76,13 +76,19 @@ at `https://mbielecki-ul.github.io/exam-os/`.
   emails them (valid roughly 1 hour — this is a Firebase-controlled limit,
   not configurable), then pick an exam. **Each exam can only be taken once
   per person** — this is enforced in `firestore.rules`, not just hidden in
-  the UI, so it can't be bypassed by re-visiting the URL.
+  the UI, so it can't be bypassed by re-visiting the URL. An admin can lift
+  this for one specific person from the admin pages (see below).
 - **Admin** (`maximilian.bielecki@ul.com` or `max@bielecki.at`): after logging in the same way,
   an **Admin** link appears in the nav. From there:
   - **Results**: every submitted result, filterable by exam — the filter
     also drives two bar charts above the table (Attended/Passed/Failed and
     Correct/Wrong answers), so switching the exam dropdown updates the
-    charts to match.
+    charts to match. Each row has a **Delete & reopen** action — it
+    permanently deletes that result and immediately frees up that exact
+    person's one attempt at that exam, so they can take it again. This is
+    the only way to let someone retake an exam; there's no undo once
+    confirmed. The same action is also available per-attendee on each
+    exam's **Overview** page.
   - **Manage exams & questions**: create new exams (each needs a time limit
     in minutes — shown to employees as a countdown once they start, and
     enforced: when it reaches zero the exam auto-submits and every

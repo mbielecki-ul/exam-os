@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { listAllExams, listQuestions, pickRandomQuestions } from '../lib/exams'
 import { submitResult, getOwnResultForExam } from '../lib/results'
 import { useAuth } from '../context/AuthContext'
+import { useExamGuard } from '../context/ExamGuardContext'
 
 const QUESTIONS_PER_EXAM = 50
 const LOW_TIME_WARNING_SECONDS = 60
@@ -11,6 +12,7 @@ export default function ExamTake() {
   const { examId } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { registerExam, unregisterExam } = useExamGuard()
 
   const [exam, setExam] = useState(null)
   const [questions, setQuestions] = useState(null)
@@ -91,6 +93,11 @@ export default function ExamTake() {
         autoSubmitted: auto,
       })
 
+      // Clear the guard right away — the result is already in, so the
+      // navigate() below to the "done" screen shouldn't also trigger the
+      // leave-exam warning.
+      unregisterExam()
+
       navigate(`/exam/${examId}/done`, {
         state: { correctCount, total: questions.length, autoSubmitted: auto },
       })
@@ -106,6 +113,15 @@ export default function ExamTake() {
   useEffect(() => {
     handleSubmitRef.current = handleSubmit
   })
+
+  // Tell the exam guard an exam is running as soon as there are actual
+  // questions on screen — this is what makes NavBar/sign-out show the
+  // "leave & submit now" warning, and forces a submit if the user confirms.
+  useEffect(() => {
+    if (!questions) return
+    registerExam(() => handleSubmitRef.current({ auto: true }))
+    return () => unregisterExam()
+  }, [questions, registerExam, unregisterExam])
 
   // Countdown timer: starts once the exam (and its time limit) is loaded.
   useEffect(() => {

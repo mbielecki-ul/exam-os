@@ -92,7 +92,11 @@ at `https://mbielecki-ul.github.io/exam-os/`.
   - **Manage exams & questions**: create new exams (each needs a time limit
     in minutes — shown to employees as a countdown once they start, and
     enforced: when it reaches zero the exam auto-submits and every
-    unanswered question counts as incorrect), activate/deactivate
+    unanswered question counts as incorrect), optionally restrict an exam
+    to specific email domains (e.g. `ul.com`) — leave empty for open to
+    everyone; restricted exams are hidden from the list for anyone outside
+    the allowed domains and blocked server-side in `firestore.rules` too,
+    not just hidden in the UI, activate/deactivate
     them, and upload question pools as CSV, Excel (`.xlsx`), or JSON (see
     `sample-questions.csv` / `sample-questions.xlsx` / `sample-questions.json`
     for the exact format, each question can carry an optional `category`).

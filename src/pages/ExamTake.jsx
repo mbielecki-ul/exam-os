@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { listAllExams, listQuestions, pickRandomQuestions } from '../lib/exams'
 import { submitResult, getOwnResultForExam } from '../lib/results'
+import { examAllowsEmail } from '../lib/emailDomain'
 import { useAuth } from '../context/AuthContext'
 import { useExamGuard } from '../context/ExamGuardContext'
 
@@ -35,6 +36,13 @@ export default function ExamTake() {
         const exams = await listAllExams()
         const found = exams.find((e) => e.id === examId)
         if (!found) throw new Error('Exam not found.')
+
+        // Domain-restricted exams: the list page already hides these from
+        // people outside the allowed domains, but a direct link would
+        // otherwise bypass that.
+        if (!examAllowsEmail(found, user.email)) {
+          throw new Error('This exam is not available for your email address.')
+        }
 
         // Each exam can only be attended once per person. This also guards
         // against navigating straight to the URL after already completing

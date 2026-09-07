@@ -79,7 +79,10 @@ at `https://mbielecki-ul.github.io/exam-os/`.
   the UI, so it can't be bypassed by re-visiting the URL.
 - **Admin** (`maximilian.bielecki@ul.com` or `max@bielecki.at`): after logging in the same way,
   an **Admin** link appears in the nav. From there:
-  - **Results**: every submitted result, filterable by exam.
+  - **Results**: every submitted result, filterable by exam — the filter
+    also drives two bar charts above the table (Attended/Passed/Failed and
+    Correct/Wrong answers), so switching the exam dropdown updates the
+    charts to match.
   - **Manage exams & questions**: create new exams (each needs a time limit
     in minutes — shown to employees as a countdown once they start, and
     enforced: when it reaches zero the exam auto-submits and every

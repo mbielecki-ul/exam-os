@@ -25,11 +25,12 @@ export async function listAllExams() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
-export async function createExam({ name, description, timeLimitMinutes }) {
+export async function createExam({ name, description, timeLimitMinutes, allowedDomains }) {
   const ref = await addDoc(collection(db, EXAMS), {
     name,
     description: description || '',
     timeLimitMinutes: Number(timeLimitMinutes),
+    allowedDomains: allowedDomains || [], // empty = open to everyone
     active: true,
     createdAt: serverTimestamp(),
   })
@@ -38,6 +39,10 @@ export async function createExam({ name, description, timeLimitMinutes }) {
 
 export async function updateExamTimeLimit(examId, timeLimitMinutes) {
   await updateDoc(doc(db, EXAMS, examId), { timeLimitMinutes: Number(timeLimitMinutes) })
+}
+
+export async function updateExamDomains(examId, allowedDomains) {
+  await updateDoc(doc(db, EXAMS, examId), { allowedDomains })
 }
 
 export async function setExamActive(examId, active) {

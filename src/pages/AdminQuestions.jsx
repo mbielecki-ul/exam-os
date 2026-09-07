@@ -159,6 +159,7 @@ export default function AdminQuestions() {
                 </div>
               </div>
               <div className="exam-admin-actions">
+                <Link className="button" to={`/admin/exams/${exam.id}`}>View overview</Link>
                 <Link className="button" to={`/admin/questions/${exam.id}`}>Manage questions</Link>
                 <button onClick={() => handleToggleActive(exam)}>
                   {exam.active ? 'Deactivate' : 'Activate'}

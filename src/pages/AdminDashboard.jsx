@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listAllResults } from '../lib/results'
+import { listAllResults, summarizeExamResults } from '../lib/results'
+import ExamBarChart from '../components/ExamBarChart'
+
+const PASS_COLOR = '#5fd0a3'
+const FAIL_COLOR = '#e5786d'
+const CORRECT_COLOR = '#5fd0a3'
+const WRONG_COLOR = '#e5786d'
 
 export default function AdminDashboard() {
   const [results, setResults] = useState(null)
@@ -22,8 +28,21 @@ export default function AdminDashboard() {
     return results.filter((r) => r.examName === examFilter)
   }, [results, examFilter])
 
+  const stats = useMemo(() => summarizeExamResults(filtered), [filtered])
+
   if (error) return <div className="page"><p className="error-text">{error}</p></div>
   if (!results) return <div className="page"><p>Loading …</p></div>
+
+  const attendanceData = [
+    { name: 'Attended', value: stats.attendees, fill: 'var(--muted)' },
+    { name: 'Passed', value: stats.passed, fill: PASS_COLOR },
+    { name: 'Failed', value: stats.failed, fill: FAIL_COLOR },
+  ]
+
+  const answersData = [
+    { name: 'Correct', value: stats.totalCorrect, fill: CORRECT_COLOR },
+    { name: 'Wrong', value: stats.totalWrong, fill: WRONG_COLOR },
+  ]
 
   return (
     <div className="page">
@@ -45,6 +64,21 @@ export default function AdminDashboard() {
         <span className="muted">{filtered.length} result(s)</span>
       </div>
 
+      {filtered.length === 0 ? (
+        <p className="muted">No results {examFilter === 'all' ? 'yet' : 'for this exam yet'}.</p>
+      ) : (
+        <div className="chart-grid">
+          <div className="card">
+            <h2>Attendance &amp; pass rate</h2>
+            <ExamBarChart data={attendanceData} />
+          </div>
+          <div className="card">
+            <h2>Answers given</h2>
+            <ExamBarChart data={answersData} />
+          </div>
+        </div>
+      )}
+
       <table className="results-table">
         <thead>
           <tr>
@@ -60,7 +94,7 @@ export default function AdminDashboard() {
           {filtered.map((r) => (
             <tr key={r.id}>
               <td>{r.userEmail}</td>
-              <td>{r.examName}</td>
+              <td><Link to={`/admin/exams/${r.examId}`}>{r.examName}</Link></td>
               <td>
                 {r.correctCount} / {r.totalQuestions} (
                 {Math.round((r.correctCount / r.totalQuestions) * 100)}%)

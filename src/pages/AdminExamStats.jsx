@@ -35,14 +35,34 @@ export default function AdminExamStats() {
   const totalAnswers = stats.totalCorrect + stats.totalWrong
 
   const attendanceData = [
-    { name: 'Attended', value: stats.attendees, fill: 'var(--muted)' },
-    { name: 'Passed', value: stats.passed, fill: PASS_COLOR },
-    { name: 'Failed', value: stats.failed, fill: FAIL_COLOR },
+    { name: 'Attended', value: stats.attendees, percent: 100, fill: 'var(--muted)' },
+    {
+      name: 'Passed',
+      value: stats.passed,
+      percent: stats.attendees > 0 ? (stats.passed / stats.attendees) * 100 : 0,
+      fill: PASS_COLOR,
+    },
+    {
+      name: 'Failed',
+      value: stats.failed,
+      percent: stats.attendees > 0 ? (stats.failed / stats.attendees) * 100 : 0,
+      fill: FAIL_COLOR,
+    },
   ]
 
   const answersData = [
-    { name: 'Correct', value: stats.totalCorrect, fill: CORRECT_COLOR },
-    { name: 'Wrong', value: stats.totalWrong, fill: WRONG_COLOR },
+    {
+      name: 'Correct',
+      value: stats.totalCorrect,
+      percent: totalAnswers > 0 ? (stats.totalCorrect / totalAnswers) * 100 : 0,
+      fill: CORRECT_COLOR,
+    },
+    {
+      name: 'Wrong',
+      value: stats.totalWrong,
+      percent: totalAnswers > 0 ? (stats.totalWrong / totalAnswers) * 100 : 0,
+      fill: WRONG_COLOR,
+    },
   ]
 
   return (

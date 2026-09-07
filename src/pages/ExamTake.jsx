@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { listAllExams, listQuestions, pickRandomQuestions } from '../lib/exams'
-import { submitResult } from '../lib/results'
+import { submitResult, getOwnResultForExam } from '../lib/results'
 import { useAuth } from '../context/AuthContext'
 
 const QUESTIONS_PER_EXAM = 50
@@ -33,6 +33,16 @@ export default function ExamTake() {
         const exams = await listAllExams()
         const found = exams.find((e) => e.id === examId)
         if (!found) throw new Error('Exam not found.')
+
+        // Each exam can only be attended once per person. This also guards
+        // against navigating straight to the URL after already completing
+        // it — the "Start exam" button on the list page already hides in
+        // that case, but a direct link would otherwise bypass that.
+        const existing = await getOwnResultForExam(examId, user.uid)
+        if (existing) {
+          throw new Error('You have already completed this exam. Each exam can only be taken once.')
+        }
+
         setExam(found)
 
         const pool = await listQuestions(examId)
@@ -43,7 +53,7 @@ export default function ExamTake() {
       }
     }
     load()
-  }, [examId])
+  }, [examId, user.uid])
 
   const question = questions ? questions[current] : null
   const answeredCount = Object.keys(answers).length
@@ -71,6 +81,7 @@ export default function ExamTake() {
 
       await submitResult({
         userEmail: user.email,
+        userUid: user.uid,
         examId,
         examName: exam.name,
         startedAtMs,
@@ -115,7 +126,16 @@ export default function ExamTake() {
     return () => clearInterval(interval)
   }, [exam, questions, startedAtMs])
 
-  if (error) return <div className="page"><p className="error-text">{error}</p></div>
+  if (error) {
+    return (
+      <div className="page-center">
+        <div className="card login-card">
+          <p className="error-text">{error}</p>
+          <Link className="button" to="/">Back to overview</Link>
+        </div>
+      </div>
+    )
+  }
   if (!exam || !questions) return <div className="page"><p>Loading …</p></div>
 
   return (

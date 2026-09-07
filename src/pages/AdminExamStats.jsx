@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { listAllExams } from '../lib/exams'
-import { listResultsForExam, summarizeExamResults, PASS_THRESHOLD } from '../lib/results'
+import { listResultsForExam, summarizeExamResults, deleteResult, PASS_THRESHOLD } from '../lib/results'
 import ExamBarChart from '../components/ExamBarChart'
 
 const PASS_COLOR = '#5fd0a3'
@@ -24,18 +24,30 @@ export default function AdminExamStats() {
   }, [])
 
   useEffect(() => {
-    async function load() {
-      try {
-        setResults(null)
-        const exams = await listAllExams()
-        setExam(exams.find((e) => e.id === examId) || null)
-        setResults(await listResultsForExam(examId))
-      } catch (err) {
-        setError(err.message)
-      }
-    }
-    load()
+    refresh()
   }, [examId])
+
+  async function refresh() {
+    try {
+      setResults(null)
+      const exams = await listAllExams()
+      setExam(exams.find((e) => e.id === examId) || null)
+      setResults(await listResultsForExam(examId))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function handleDelete(result) {
+    const confirmed = window.confirm(
+      `Delete this result?\n\n${result.userEmail}\n\n` +
+        `This can't be undone, and ${result.userEmail} will immediately be able ` +
+        `to take this exam again.`
+    )
+    if (!confirmed) return
+    await deleteResult(result.id)
+    await refresh()
+  }
 
   if (error) return <div className="page"><p className="error-text">{error}</p></div>
   if (!results) return <div className="page"><p>Loading …</p></div>
@@ -143,6 +155,7 @@ export default function AdminExamStats() {
                 <th>Score</th>
                 <th>Result</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -157,6 +170,11 @@ export default function AdminExamStats() {
                       {passed ? 'Passed' : 'Failed'}
                     </td>
                     <td>{r.autoSubmitted ? 'Timed out' : 'Submitted'}</td>
+                    <td>
+                      <button className="link-btn-danger" onClick={() => handleDelete(r)}>
+                        Delete &amp; reopen
+                      </button>
+                    </td>
                   </tr>
                 )
               })}

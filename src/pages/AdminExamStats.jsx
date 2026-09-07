@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { listAllExams } from '../lib/exams'
 import { listResultsForExam, summarizeExamResults, PASS_THRESHOLD } from '../lib/results'
 import ExamBarChart from '../components/ExamBarChart'
@@ -11,13 +11,22 @@ const WRONG_COLOR = '#e5786d'
 
 export default function AdminExamStats() {
   const { examId } = useParams()
+  const navigate = useNavigate()
+  const [exams, setExams] = useState(null)
   const [exam, setExam] = useState(null)
   const [results, setResults] = useState(null)
   const [error, setError] = useState('')
 
+  // Load the full exam list once, so the selector below can switch between
+  // them without a round trip back to "Manage exams & questions".
+  useEffect(() => {
+    listAllExams().then(setExams).catch((err) => setError(err.message))
+  }, [])
+
   useEffect(() => {
     async function load() {
       try {
+        setResults(null)
         const exams = await listAllExams()
         setExam(exams.find((e) => e.id === examId) || null)
         setResults(await listResultsForExam(examId))
@@ -70,6 +79,20 @@ export default function AdminExamStats() {
       <div className="admin-header">
         <h1>{exam ? exam.name : 'Exam'} — Overview</h1>
         <Link className="button" to="/admin/questions">Back to exams</Link>
+      </div>
+
+      <div className="filter-row">
+        <label>
+          Exam:{' '}
+          <select
+            value={examId}
+            onChange={(e) => navigate(`/admin/exams/${e.target.value}`)}
+          >
+            {(exams || []).map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="stats-grid">

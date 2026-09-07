@@ -15,6 +15,17 @@ service cloud.firestore {
       ];
     }
 
+    // An exam with no allowedDomains (or an empty list) is open to anyone.
+    // Otherwise the signer's email must end in one of the listed domains.
+    // Note: this is a plain string comparison — the admin UI always lowercases
+    // saved domains, but doesn't lowercase the signer's email domain here, so
+    // a mixed-case email domain could slip past an intended restriction.
+    function examAllowsEmail(examId, email) {
+      let exam = get(/databases/$(database)/documents/exams/$(examId)).data;
+      let domains = exam.allowedDomains;
+      return domains == null || domains.size() == 0 || domains.hasAny([email.split('@')[1]]);
+    }
+
     // Exams: any logged-in employee can read; only the admin can write.
     match /exams/{examId} {
       allow read: if isSignedIn();
@@ -42,7 +53,8 @@ service cloud.firestore {
     match /results/{resultId} {
       allow create: if isSignedIn()
         && request.resource.data.userEmail == request.auth.token.email
-        && resultId == request.resource.data.examId + '_' + request.auth.uid;
+        && resultId == request.resource.data.examId + '_' + request.auth.uid
+        && examAllowsEmail(request.resource.data.examId, request.auth.token.email);
       allow read: if isAdmin() || (isSignedIn() && resource.data.userEmail == request.auth.token.email);
       allow update, delete: if isAdmin();
     }

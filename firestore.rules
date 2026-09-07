@@ -33,8 +33,16 @@ service cloud.firestore {
     // Results: an employee can create their own result and read their own
     // history, but never read anyone else's or edit/delete results.
     // The admin can read everything.
+    //
+    // The document ID must be "{examId}_{authUid}" (see resultDocId() in
+    // src/lib/results.js). That makes a second attempt at the same exam by
+    // the same person land on the same document ID, which Firestore treats
+    // as an update rather than a create — and only admins can update, so a
+    // second attempt is rejected here, not just hidden in the UI.
     match /results/{resultId} {
-      allow create: if isSignedIn() && request.resource.data.userEmail == request.auth.token.email;
+      allow create: if isSignedIn()
+        && request.resource.data.userEmail == request.auth.token.email
+        && resultId == request.resource.data.examId + '_' + request.auth.uid;
       allow read: if isAdmin() || (isSignedIn() && resource.data.userEmail == request.auth.token.email);
       allow update, delete: if isAdmin();
     }

@@ -4,6 +4,7 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -68,6 +69,14 @@ export async function listOwnResults(userEmail) {
 export async function listResultsForExam(examId) {
   const snap = await getDocs(query(collection(db, RESULTS), where('examId', '==', examId)))
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+}
+
+// Deletes a result document. Because the ID is deterministic
+// ("{examId}_{uid}"), removing it frees that exact slot back up — the
+// person can immediately take the exam again. Firestore rules restrict
+// this to admins only; there's no employee-facing path to it.
+export async function deleteResult(resultId) {
+  await deleteDoc(doc(db, RESULTS, resultId))
 }
 
 // Aggregate stats for one exam: attendees, right/wrong answer totals, and

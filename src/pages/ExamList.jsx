@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listActiveExams } from '../lib/exams'
 import { listOwnResults } from '../lib/results'
+import { examAllowsEmail } from '../lib/emailDomain'
 import { useAuth } from '../context/AuthContext'
 
 export default function ExamList() {
@@ -13,7 +14,9 @@ export default function ExamList() {
   useEffect(() => {
     Promise.all([listActiveExams(), listOwnResults(user.email)])
       .then(([e, r]) => {
-        setExams(e)
+        // Only show exams this person's email domain is actually allowed
+        // to take (an exam with no allowedDomains is open to everyone).
+        setExams(e.filter((exam) => examAllowsEmail(exam, user.email)))
         setOwnResults(r)
       })
       .catch((err) => setError(err.message))

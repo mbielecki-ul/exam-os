@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Firebase
+.firebase/
+firebase-debug.log
+# Never commit a service-account key
+*serviceAccount*.json
+firebase-sa.json

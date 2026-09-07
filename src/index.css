@@ -448,6 +448,10 @@ input, select {
   width: 5rem;
 }
 
+.domain-input {
+  width: 16rem;
+}
+
 .exam-timer {
   font-family: 'IBM Plex Mono', monospace;
   font-weight: 500;

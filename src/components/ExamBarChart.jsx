@@ -36,8 +36,8 @@ function CustomTooltip({ active, payload }) {
         fontSize: '0.85rem',
       }}
     >
-      <p style={{ margin: 0, fontWeight: 500 }}>{point.name}</p>
-      <p style={{ margin: 0 }}>
+      <p style={{ margin: 0, fontWeight: 500, color: 'var(--text)' }}>{point.name}</p>
+      <p style={{ margin: 0, color: 'var(--text)' }}>
         {point.value} ({Math.round(point.percent)}%)
       </p>
     </div>

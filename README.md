@@ -22,12 +22,19 @@ as the backend. No server, no paid plan, no credit card required.
 
 ### 2. Deploy the Firestore security rules
 
-Install the Firebase CLI once (`npm install -g firebase-tools`), then from the repo root:
+`firestore.rules` and `firebase.json` are already in the repo. Once the
+secrets in the next step are set, the
+`.github/workflows/deploy-firestore-rules.yml` workflow deploys the rules
+automatically on every push to `main` that changes `firestore.rules` (and
+can be re-run by hand from the **Actions** tab).
+
+For the very first deploy — or to push rules without a commit — you can
+also do it locally:
 
 ```bash
+npm install -g firebase-tools
 firebase login
-firebase init firestore   # pick your exam-os project, keep firestore.rules as-is
-firebase deploy --only firestore:rules
+firebase deploy --only firestore:rules --project <your-project-id>
 ```
 
 This applies `firestore.rules`, which hardcodes `maximilian.bielecki@ul.com`
@@ -58,6 +65,16 @@ Add each of these (values from step 1.2):
 These aren't secret in the security sense (Firebase web config is public
 by design — actual security is the Firestore rules), we just keep them
 out of source for tidiness.
+
+For the **Firestore rules deploy** workflow (step 2), add two more — these
+*are* sensitive:
+
+- `FIREBASE_PROJECT_ID` — your project ID (same value as
+  `VITE_FIREBASE_PROJECT_ID`).
+- `FIREBASE_SERVICE_ACCOUNT` — a service-account key with permission to
+  deploy rules. In the [Firebase console](https://console.firebase.google.com):
+  **Project settings → Service accounts → Generate new private key**, then
+  paste the entire downloaded JSON file as the secret value.
 
 ### 5. Push and deploy
 

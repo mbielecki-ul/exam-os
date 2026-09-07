@@ -114,6 +114,18 @@ npm run dev
 
 ## Known limitations (worth knowing, not blockers for an internal quiz)
 
+- **Leaving mid-exam**: navigating to another page, signing out, or closing
+  the tab while an exam is in progress shows a warning that leaving will
+  submit the exam immediately with only what's answered so far (everything
+  else counts as incorrect) and that it can't be repeated afterwards. This
+  is enforced for in-app navigation (nav bar, sign out) with a proper
+  confirmation dialog; browser/tab close and refresh only get the browser's
+  own generic "leave site?" prompt (custom text isn't possible there — a
+  long-standing browser security restriction), and the browser **back
+  button** isn't currently intercepted at all, since blocking it reliably
+  needs extra history-manipulation plumbing that felt like overkill for an
+  internal tool. Test each of these paths once when adding a new exam if
+  this matters to you operationally.
 - **Magic link expiry** is fixed by Firebase (~1 hour), not exactly
   configurable to a specific number of hours.
 - **Grading happens in the browser**, so a technically curious employee

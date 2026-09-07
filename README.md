@@ -30,11 +30,12 @@ firebase init firestore   # pick your exam-os project, keep firestore.rules as-i
 firebase deploy --only firestore:rules
 ```
 
-This applies `firestore.rules`, which hardcodes `maximilian.bielecki@ul.com`
-and `max@bielecki.at` as the only admin identities able to write
-exams/questions and read all results. If you ever need another admin,
-add another entry to the list in the `isAdmin()` function in that file
-(and to `ADMIN_EMAILS` in `src/lib/firebase.js`).
+This applies `firestore.rules`, which hardcodes `maximilian.bielecki@ul.com`,
+`max@bielecki.at`, and `thomas.reznicek@ul.com` as the only admin
+identities able to write exams/questions and read all results. If you ever
+need another admin, add another entry to the list in the `isAdmin()`
+function in that file **and** to `ADMIN_EMAILS` in `src/lib/firebase.js` —
+the two lists must match.
 
 ### 3. Enable GitHub Pages
 
@@ -78,7 +79,7 @@ at `https://mbielecki-ul.github.io/exam-os/`.
   per person** — this is enforced in `firestore.rules`, not just hidden in
   the UI, so it can't be bypassed by re-visiting the URL. An admin can lift
   this for one specific person from the admin pages (see below).
-- **Admin** (`maximilian.bielecki@ul.com` or `max@bielecki.at`): after logging in the same way,
+- **Admin** (`maximilian.bielecki@ul.com`, `max@bielecki.at`, or `thomas.reznicek@ul.com`): after logging in the same way,
   an **Admin** link appears in the nav. From there:
   - **Results**: every submitted result, filterable by exam — the filter
     also drives two bar charts above the table (Attended/Passed/Failed and

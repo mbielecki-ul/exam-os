@@ -32,10 +32,18 @@ npm run preview  # preview the production build locally
 project, dummy values work fine since Vite only needs them to resolve at
 build time, not to actually connect.
 
-Deployment is automatic via `.github/workflows/deploy.yml` on every push
-to `main` (`npm ci`, `npm run build`, publish `dist/` to GitHub Pages). It
-pulls the `VITE_FIREBASE_*` values from GitHub Actions secrets, not from a
-committed `.env`. There is no test suite.
+Two deploy workflows run on push to `main`, both from GitHub Actions
+secrets (no committed `.env`):
+- `.github/workflows/deploy.yml` — `npm ci`, `npm run build`, publish
+  `dist/` to GitHub Pages. Uses the `VITE_FIREBASE_*` secrets.
+- `.github/workflows/deploy-firestore-rules.yml` — runs
+  `firebase deploy --only firestore:rules` (config in `firebase.json`)
+  **only when `firestore.rules` / `firebase.json` / that workflow file
+  changes**. Auth is the `FIREBASE_SERVICE_ACCOUNT` + `FIREBASE_PROJECT_ID`
+  secrets; the service account needs the `roles/firebase.admin` IAM role.
+  Also runnable by hand from the Actions tab (`workflow_dispatch`).
+
+There is no test suite.
 
 ## Routes and files
 
@@ -99,8 +107,13 @@ filtering an exam list, blocking a route) is also enforced in
 `firestore.rules`, because client-side checks are trivially bypassable by
 anyone who opens devtools. When adding a new restriction, always ask "if
 someone crafted a raw Firestore write, would this actually stop them?" and
-update the rules file, not just a component. Known limitation:
-domain-restriction comparisons in `firestore.rules` are **case-sensitive**
+update the rules file, not just a component. Editing `firestore.rules` on
+a branch changes nothing live until it lands on `main` — the
+`deploy-firestore-rules.yml` workflow is what pushes it to Firebase (see
+Commands). For a quick local check without deploying,
+`firebase deploy --only firestore:rules --project <id> --dry-run`. Known
+limitation: domain-restriction comparisons in `firestore.rules` are
+**case-sensitive**
 on the signer's email domain (the admin-entered domain list is lowercased
 on save, the email side in CEL is not) — CEL doesn't reliably expose a
 `.lower()` here. The client-side mirror in `src/lib/emailDomain.js`

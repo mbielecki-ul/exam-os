@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listAllResults, summarizeExamResults } from '../lib/results'
+import { listAllResults, summarizeExamResults, deleteResult } from '../lib/results'
 import ExamBarChart from '../components/ExamBarChart'
 
 const PASS_COLOR = '#5fd0a3'
@@ -14,8 +14,23 @@ export default function AdminDashboard() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    listAllResults().then(setResults).catch((err) => setError(err.message))
+    refresh()
   }, [])
+
+  function refresh() {
+    return listAllResults().then(setResults).catch((err) => setError(err.message))
+  }
+
+  async function handleDelete(result) {
+    const confirmed = window.confirm(
+      `Delete this result?\n\n${result.userEmail} — ${result.examName}\n\n` +
+        `This can't be undone, and ${result.userEmail} will immediately be able ` +
+        `to take "${result.examName}" again.`
+    )
+    if (!confirmed) return
+    await deleteResult(result.id)
+    await refresh()
+  }
 
   const examNames = useMemo(() => {
     if (!results) return []
@@ -109,6 +124,7 @@ export default function AdminDashboard() {
             <th>Duration</th>
             <th>Status</th>
             <th>Submitted</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -123,6 +139,11 @@ export default function AdminDashboard() {
               <td>{formatDuration(r.durationSeconds)}</td>
               <td>{r.autoSubmitted ? 'Timed out' : 'Submitted'}</td>
               <td>{formatTimestamp(r.submittedAt)}</td>
+              <td>
+                <button className="link-btn-danger" onClick={() => handleDelete(r)}>
+                  Delete &amp; reopen
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

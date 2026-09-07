@@ -25,14 +25,17 @@ export default function ExamList() {
   return (
     <div className="page">
       <h1>Available exams</h1>
+      <p className="muted">Each exam can only be taken once.</p>
       {exams.length === 0 && <p>No exam is available right now.</p>}
       <div className="exam-grid">
         {exams.map((exam) => {
-          const attempts = ownResults.filter((r) => r.examId === exam.id)
-          const best = attempts.reduce(
-            (max, r) => Math.max(max, r.correctCount / r.totalQuestions),
-            0
-          )
+          // Each exam can only be attended once, so there's at most one
+          // result per exam here.
+          const completedResult = ownResults.find((r) => r.examId === exam.id)
+          const pct = completedResult
+            ? Math.round((completedResult.correctCount / completedResult.totalQuestions) * 100)
+            : null
+
           return (
             <div key={exam.id} className="card exam-card">
               <h2>{exam.name}</h2>
@@ -40,12 +43,16 @@ export default function ExamList() {
               {exam.timeLimitMinutes && (
                 <p className="muted">Time limit: {exam.timeLimitMinutes} minutes</p>
               )}
-              {attempts.length > 0 && (
-                <p className="muted">
-                  Taken {attempts.length}× · best score {Math.round(best * 100)}%
-                </p>
+              {completedResult ? (
+                <>
+                  <p className="muted">
+                    Completed · {completedResult.correctCount} / {completedResult.totalQuestions} correct ({pct}%)
+                  </p>
+                  <span className="badge-done">Already completed</span>
+                </>
+              ) : (
+                <Link className="button" to={`/exam/${exam.id}`}>Start exam</Link>
               )}
-              <Link className="button" to={`/exam/${exam.id}`}>Start exam</Link>
             </div>
           )
         })}

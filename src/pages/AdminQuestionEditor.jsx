@@ -30,9 +30,17 @@ export default function AdminQuestionEditor() {
     refresh().catch((err) => setError(err.message))
   }, [examId])
 
+  // Category names with how many questions each holds, for the filter dropdown.
   const categories = useMemo(() => {
     if (!questions) return []
-    return [...new Set(questions.map((q) => q.category || 'Uncategorized'))].sort()
+    const counts = new Map()
+    for (const q of questions) {
+      const c = q.category || 'Uncategorized'
+      counts.set(c, (counts.get(c) || 0) + 1)
+    }
+    return [...counts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }))
   }, [questions])
 
   const filtered = useMemo(() => {
@@ -120,9 +128,9 @@ export default function AdminQuestionEditor() {
         <label>
           Category:{' '}
           <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="all">All</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
+            <option value="all">All ({questions.length})</option>
+            {categories.map(({ name, count }) => (
+              <option key={name} value={name}>{name} ({count})</option>
             ))}
           </select>
         </label>

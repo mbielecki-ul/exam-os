@@ -5,11 +5,13 @@ import {
   createExam,
   setExamActive,
   updateExamTimeLimit,
+  updateExamDomains,
   deleteExam,
   countQuestions,
   addQuestions,
 } from '../lib/exams'
 import { parseQuestionFile } from '../lib/parseQuestions'
+import { parseDomainList } from '../lib/emailDomain'
 
 export default function AdminQuestions() {
   const [exams, setExams] = useState(null)
@@ -17,7 +19,9 @@ export default function AdminQuestions() {
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [newTimeLimit, setNewTimeLimit] = useState('60')
+  const [newDomains, setNewDomains] = useState('')
   const [timeLimitDrafts, setTimeLimitDrafts] = useState({}) // examId -> string being edited
+  const [domainDrafts, setDomainDrafts] = useState({}) // examId -> string being edited
   const [uploadTarget, setUploadTarget] = useState({}) // examId -> {status, message}
   const [error, setError] = useState('')
 
@@ -39,10 +43,12 @@ export default function AdminQuestions() {
       name: newName.trim(),
       description: newDesc.trim(),
       timeLimitMinutes: newTimeLimit,
+      allowedDomains: parseDomainList(newDomains),
     })
     setNewName('')
     setNewDesc('')
     setNewTimeLimit('60')
+    setNewDomains('')
     await refresh()
   }
 
@@ -51,6 +57,18 @@ export default function AdminQuestions() {
     if (!value || Number(value) <= 0) return
     await updateExamTimeLimit(examId, value)
     setTimeLimitDrafts((prev) => {
+      const next = { ...prev }
+      delete next[examId]
+      return next
+    })
+    await refresh()
+  }
+
+  async function handleSaveDomains(examId) {
+    const value = domainDrafts[examId]
+    if (value === undefined) return
+    await updateExamDomains(examId, parseDomainList(value))
+    setDomainDrafts((prev) => {
       const next = { ...prev }
       delete next[examId]
       return next
@@ -121,8 +139,17 @@ export default function AdminQuestions() {
             required
             style={{ maxWidth: '11rem' }}
           />
+          <input
+            placeholder="Allowed domains (optional, e.g. ul.com)"
+            value={newDomains}
+            onChange={(e) => setNewDomains(e.target.value)}
+          />
           <button type="submit" className="button">Create</button>
         </form>
+        <p className="muted" style={{ marginTop: '0.5rem' }}>
+          Allowed domains: comma-separated (e.g. <code>ul.com, partner.com</code>).
+          Leave empty for an exam open to every employee.
+        </p>
       </div>
 
       <div className="exam-admin-list">
@@ -156,6 +183,29 @@ export default function AdminQuestions() {
                   {!exam.timeLimitMinutes && timeLimitDrafts[exam.id] === undefined && (
                     <span className="error-text">No time limit set yet — exam will run unlimited.</span>
                   )}
+                </div>
+                <div className="time-limit-row">
+                  <label className="muted">
+                    Allowed domains:{' '}
+                    <input
+                      className="domain-input"
+                      value={
+                        domainDrafts[exam.id] ??
+                        (exam.allowedDomains || []).join(', ')
+                      }
+                      placeholder="open to everyone"
+                      onChange={(e) =>
+                        setDomainDrafts((prev) => ({ ...prev, [exam.id]: e.target.value }))
+                      }
+                    />
+                  </label>
+                  {domainDrafts[exam.id] !== undefined && (
+                    <button onClick={() => handleSaveDomains(exam.id)}>Save</button>
+                  )}
+                  {(!exam.allowedDomains || exam.allowedDomains.length === 0) &&
+                    domainDrafts[exam.id] === undefined && (
+                      <span className="muted">Open to everyone</span>
+                    )}
                 </div>
               </div>
               <div className="exam-admin-actions">

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 // These values are the public Firebase "web app" identifiers — they are not
@@ -17,6 +17,13 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+
+// Session-only persistence: sign-in doesn't survive closing the tab/browser.
+// Several core-ops exams are taken from shared shift/control-room terminals,
+// where Firebase's default (persists indefinitely via IndexedDB) would let
+// the next person on the same machine silently inherit the previous
+// employee's signed-in session.
+setPersistence(auth, browserSessionPersistence)
 
 // Hardcoded admin email — kept in one place, also mirrored in firestore.rules.
 export const ADMIN_EMAILS = ['maximilian.bielecki@ul.com', 'max@bielecki.at', 'thomas.reznicek@ul.com']

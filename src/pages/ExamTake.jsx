@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { listAllExams, listQuestions, pickRandomQuestions } from '../lib/exams'
 import { submitResult, getOwnResultForExam } from '../lib/results'
 import { examAllowsEmail } from '../lib/emailDomain'
+import { loadExamProgress, saveExamProgress, clearExamProgress } from '../lib/examProgress'
 import { useAuth } from '../context/AuthContext'
 import { useExamGuard } from '../context/ExamGuardContext'
 
@@ -19,7 +20,9 @@ export default function ExamTake() {
   const [questions, setQuestions] = useState(null)
   const [current, setCurrent] = useState(0)
   const [answers, setAnswers] = useState({}) // questionId -> selectedIndex
-  const [startedAtMs] = useState(() => Date.now())
+  // Set once the attempt actually starts (fresh, or resumed from a saved
+  // in-progress attempt) — see the load() effect below.
+  const [startedAtMs, setStartedAtMs] = useState(null)
   const [remainingSeconds, setRemainingSeconds] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -50,20 +53,50 @@ export default function ExamTake() {
         // that case, but a direct link would otherwise bypass that.
         const existing = await getOwnResultForExam(examId, user.uid)
         if (existing) {
+          clearExamProgress(examId, user.uid)
           throw new Error('You have already completed this exam. Each exam can only be taken once.')
         }
 
         setExam(found)
 
+        // Resume a saved in-progress attempt (same drawn questions, answers,
+        // position, and original start time) rather than drawing a fresh
+        // set and resetting the timer — a dropped connection or a tab killed
+        // in the background shouldn't cost the whole attempt.
+        const saved = loadExamProgress(examId, user.uid)
+        if (saved) {
+          setQuestions(saved.questions)
+          setAnswers(saved.answers || {})
+          setCurrent(saved.current || 0)
+          setStartedAtMs(saved.startedAtMs)
+          return
+        }
+
         const pool = await listQuestions(examId)
         if (pool.length === 0) throw new Error('No questions have been set up for this exam yet.')
-        setQuestions(pickRandomQuestions(pool, QUESTIONS_PER_EXAM))
+        const picked = pickRandomQuestions(pool, QUESTIONS_PER_EXAM)
+        const now = Date.now()
+        setQuestions(picked)
+        setStartedAtMs(now)
+        saveExamProgress(examId, user.uid, {
+          questions: picked,
+          answers: {},
+          current: 0,
+          startedAtMs: now,
+        })
       } catch (err) {
         setError(err.message)
       }
     }
     load()
   }, [examId, user.uid])
+
+  // Keep the saved attempt in sync as the person answers/navigates, so a
+  // resume picks up exactly where they left off.
+  useEffect(() => {
+    if (!questions || !startedAtMs) return
+    saveExamProgress(examId, user.uid, { questions, answers, current, startedAtMs })
+  }, [examId, user.uid, questions, answers, current, startedAtMs])
 
   const question = questions ? questions[current] : null
   const answeredCount = Object.keys(answers).length
@@ -101,6 +134,8 @@ export default function ExamTake() {
         autoSubmitted: auto,
       })
 
+      clearExamProgress(examId, user.uid)
+
       // Clear the guard right away — the result is already in, so the
       // navigate() below to the "done" screen shouldn't also trigger the
       // leave-exam warning.
@@ -111,6 +146,36 @@ export default function ExamTake() {
       })
     } catch (err) {
       hasSubmittedRef.current = false
+
+      // A "permission-denied" here almost always means the first attempt's
+      // write actually reached Firestore and only the confirmation was lost
+      // (e.g. a dropped connection right at submit) — a second write to the
+      // same result document is a Firestore "update", which only admins may
+      // do. Rather than show that confusing raw error, check whether the
+      // result is in fact already there and, if so, treat this as success.
+      if (err.code === 'permission-denied') {
+        try {
+          const existing = await getOwnResultForExam(examId, user.uid)
+          if (existing) {
+            clearExamProgress(examId, user.uid)
+            unregisterExam()
+            navigate(`/exam/${examId}/done`, {
+              state: {
+                correctCount: existing.correctCount,
+                total: existing.totalQuestions,
+                autoSubmitted: existing.autoSubmitted,
+              },
+            })
+            return
+          }
+        } catch {
+          // fall through to the generic message below
+        }
+        setError('Could not submit your exam — please check your connection and try again.')
+        setSubmitting(false)
+        return
+      }
+
       setError(err.message)
       setSubmitting(false)
     }
@@ -133,7 +198,7 @@ export default function ExamTake() {
 
   // Countdown timer: starts once the exam (and its time limit) is loaded.
   useEffect(() => {
-    if (!exam || !exam.timeLimitMinutes || !questions) return
+    if (!exam || !exam.timeLimitMinutes || !questions || !startedAtMs) return
 
     const deadlineMs = startedAtMs + exam.timeLimitMinutes * 60 * 1000
 

@@ -4,16 +4,20 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  getCountFromServer,
   deleteDoc,
   query,
   where,
   orderBy,
+  limit,
+  startAfter,
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
 const RESULTS = 'results'
 const PASS_THRESHOLD = 0.66
+const RESULTS_PAGE_SIZE = 200
 
 // One result per (exam, person): deterministic ID means a second attempt at
 // the same exam by the same person always lands on the same document.
@@ -54,9 +58,31 @@ export async function submitResult({
   })
 }
 
-export async function listAllResults() {
-  const snap = await getDocs(query(collection(db, RESULTS), orderBy('submittedAt', 'desc')))
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+// Total number of results across all exams, via Firestore's server-side
+// count aggregation — one request regardless of how many documents match,
+// so the Results dashboard can show "N of M loaded" without pulling every
+// result down just to count them.
+export async function countAllResults() {
+  const snap = await getCountFromServer(collection(db, RESULTS))
+  return snap.data().count
+}
+
+// One page of results across all exams, newest first. Pass a previous
+// call's `cursor` to fetch the next page. Used instead of a single
+// unbounded fetch so opening the Results dashboard doesn't re-read every
+// result ever recorded — that only gets more expensive as history grows,
+// and this runs on Firestore's free (Spark) plan by design.
+export async function listResultsPage(cursor = null) {
+  const constraints = [orderBy('submittedAt', 'desc')]
+  if (cursor) constraints.push(startAfter(cursor))
+  constraints.push(limit(RESULTS_PAGE_SIZE))
+
+  const snap = await getDocs(query(collection(db, RESULTS), ...constraints))
+  return {
+    results: snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    cursor: snap.docs[snap.docs.length - 1] || null,
+    hasMore: snap.docs.length === RESULTS_PAGE_SIZE,
+  }
 }
 
 export async function listOwnResults(userEmail) {

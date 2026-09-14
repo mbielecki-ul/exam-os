@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listAllResults, summarizeExamResults, deleteResult } from '../lib/results'
+import { countAllResults, listResultsPage, summarizeExamResults, deleteResult } from '../lib/results'
 import ExamBarChart from '../components/ExamBarChart'
 
 const PASS_COLOR = '#5fd0a3'
@@ -10,6 +10,10 @@ const WRONG_COLOR = '#e5786d'
 
 export default function AdminDashboard() {
   const [results, setResults] = useState(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const [cursor, setCursor] = useState(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [examFilter, setExamFilter] = useState('all')
   const [error, setError] = useState('')
 
@@ -17,8 +21,34 @@ export default function AdminDashboard() {
     refresh()
   }, [])
 
-  function refresh() {
-    return listAllResults().then(setResults).catch((err) => setError(err.message))
+  // Reloads from the newest result — used on mount and after a delete.
+  // Charts/totals below only cover whatever pages have been loaded so far,
+  // not the whole history, to avoid re-reading every result on every visit
+  // (see listResultsPage() in src/lib/results.js).
+  async function refresh() {
+    try {
+      const [count, page] = await Promise.all([countAllResults(), listResultsPage()])
+      setTotalCount(count)
+      setResults(page.results)
+      setCursor(page.cursor)
+      setHasMore(page.hasMore)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function loadMore() {
+    setLoadingMore(true)
+    try {
+      const page = await listResultsPage(cursor)
+      setResults((prev) => [...prev, ...page.results])
+      setCursor(page.cursor)
+      setHasMore(page.hasMore)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingMore(false)
+    }
   }
 
   async function handleDelete(result) {
@@ -100,6 +130,17 @@ export default function AdminDashboard() {
         <span className="muted">{filtered.length} result(s)</span>
       </div>
 
+      {hasMore && (
+        <p className="muted">
+          Showing the {results.length} most recently submitted results of{' '}
+          {totalCount} total — the charts and totals below only cover what's
+          loaded here.{' '}
+          <button className="link-btn" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? 'Loading …' : 'Load older results'}
+          </button>
+        </p>
+      )}
+
       {filtered.length === 0 ? (
         <p className="muted">No results {examFilter === 'all' ? 'yet' : 'for this exam yet'}.</p>
       ) : (
@@ -162,5 +203,9 @@ function formatDuration(seconds) {
 function formatTimestamp(ts) {
   if (!ts) return '–'
   const date = ts.toDate ? ts.toDate() : new Date(ts)
-  return date.toLocaleString('en-GB')
+  // Explicit zone name: this renders in the viewing admin's local time, which
+  // reads as ambiguous for a 24/7 team submitting across timezones without it
+  // (was an admin looking at "22:14" seeing their own evening, or a night
+  // shift on the other side of the world?).
+  return date.toLocaleString('en-GB', { timeZoneName: 'short' })
 }

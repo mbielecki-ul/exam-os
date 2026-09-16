@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { listAllExams, listQuestions, pickRandomQuestions } from '../lib/exams'
+import { listAllExams, listQuestions, pickRandomQuestions, DEFAULT_QUESTION_COUNT } from '../lib/exams'
 import { submitResult, getOwnResultForExam } from '../lib/results'
 import { examAllowsEmail } from '../lib/emailDomain'
 import { loadExamProgress, saveExamProgress, clearExamProgress } from '../lib/examProgress'
 import { useAuth } from '../context/AuthContext'
 import { useExamGuard } from '../context/ExamGuardContext'
 
-const QUESTIONS_PER_EXAM = 50
 const LOW_TIME_WARNING_SECONDS = 60
 
 export default function ExamTake() {
@@ -74,7 +73,7 @@ export default function ExamTake() {
 
         const pool = await listQuestions(examId)
         if (pool.length === 0) throw new Error('No questions have been set up for this exam yet.')
-        const picked = pickRandomQuestions(pool, QUESTIONS_PER_EXAM)
+        const picked = pickRandomQuestions(pool, found.questionCount || DEFAULT_QUESTION_COUNT)
         const now = Date.now()
         setQuestions(picked)
         setStartedAtMs(now)

@@ -407,6 +407,31 @@ input, select {
   letter-spacing: 0.03em;
 }
 
+.answer-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 0;
+}
+
+.answer-breakdown-item .option-list {
+  gap: 0.4rem;
+}
+
+.answer-breakdown-item .option-btn {
+  cursor: default;
+}
+
+.answer-option-correct {
+  border-color: var(--accent);
+  background: rgba(95, 208, 163, 0.12);
+}
+
+.answer-option-wrong {
+  border-color: var(--danger);
+  background: rgba(229, 120, 109, 0.12);
+}
+
 .new-exam-form {
   display: flex;
   gap: 0.75rem;

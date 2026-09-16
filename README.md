@@ -115,11 +115,15 @@ at `https://mbielecki-ul.github.io/exam-os/`.
     everyone; restricted exams are hidden from the list for anyone outside
     the allowed domains and blocked server-side in `firestore.rules` too,
     not just hidden in the UI, activate/deactivate
-    them, and upload question pools as CSV, Excel (`.xlsx`), or JSON (see
-    `sample-questions.csv` / `sample-questions.xlsx` / `sample-questions.json`
-    for the exact format, each question can carry an optional `category`).
+    them, and upload question pools as CSV, Excel (`.xlsx`), or JSON —
+    sample files in each format are downloadable from the "File format"
+    card on the same page (also in the repo as `public/sample-questions.csv`
+    / `.xlsx` / `.json`, each question can carry an optional `category`).
     Upload as many batches
-    as you like — questions accumulate in the pool. Each exam attempt draws
+    as you like — questions accumulate in the pool, so re-uploading a file
+    adds to the existing questions rather than replacing them; delete
+    individual questions from **Manage questions** if you need to remove
+    old ones. Each exam attempt draws
     50 random questions from whatever's currently in that exam's pool (or
     fewer, if the pool has less than 50).
   - **View overview** (per exam, from the exams list): attendee count,

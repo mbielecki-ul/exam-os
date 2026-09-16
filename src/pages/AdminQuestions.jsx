@@ -247,7 +247,21 @@ export default function AdminQuestions() {
           CSV/Excel columns: <code>question,option1,option2,option3,option4,correctOption,category</code>{' '}
           (correctOption = 1–4, category is optional text). JSON: array of{' '}
           <code>{'{ "text", "options": [4], "correctIndex": 0-3, "category": "..." }'}</code>.
-          Download <code>sample-questions.xlsx</code> in the repo for a working example.
+        </p>
+        <p className="muted">
+          Sample files with a working example:{' '}
+          <a href={`${import.meta.env.BASE_URL}sample-questions.csv`} download>
+            sample-questions.csv
+          </a>
+          ,{' '}
+          <a href={`${import.meta.env.BASE_URL}sample-questions.xlsx`} download>
+            sample-questions.xlsx
+          </a>
+          , or{' '}
+          <a href={`${import.meta.env.BASE_URL}sample-questions.json`} download>
+            sample-questions.json
+          </a>
+          .
         </p>
       </div>
     </div>

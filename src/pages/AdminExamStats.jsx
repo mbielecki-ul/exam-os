@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { listAllExams } from '../lib/exams'
+import { listAllExams, listQuestions } from '../lib/exams'
 import { listResultsForExam, summarizeExamResults, deleteResult, PASS_THRESHOLD } from '../lib/results'
 import ExamBarChart from '../components/ExamBarChart'
 
@@ -15,6 +15,8 @@ export default function AdminExamStats() {
   const [exams, setExams] = useState(null)
   const [exam, setExam] = useState(null)
   const [results, setResults] = useState(null)
+  const [questionsById, setQuestionsById] = useState({})
+  const [expandedResultId, setExpandedResultId] = useState(null)
   const [error, setError] = useState('')
 
   // Load the full exam list once, so the selector below can switch between
@@ -30,9 +32,15 @@ export default function AdminExamStats() {
   async function refresh() {
     try {
       setResults(null)
+      setExpandedResultId(null)
       const exams = await listAllExams()
       setExam(exams.find((e) => e.id === examId) || null)
-      setResults(await listResultsForExam(examId))
+      const [examResults, questions] = await Promise.all([
+        listResultsForExam(examId),
+        listQuestions(examId),
+      ])
+      setResults(examResults)
+      setQuestionsById(Object.fromEntries(questions.map((q) => [q.id, q])))
     } catch (err) {
       setError(err.message)
     }
@@ -162,20 +170,36 @@ export default function AdminExamStats() {
               {results.map((r) => {
                 const pct = Math.round((r.correctCount / r.totalQuestions) * 100)
                 const passed = r.correctCount / r.totalQuestions >= PASS_THRESHOLD
+                const expanded = expandedResultId === r.id
                 return (
-                  <tr key={r.id}>
-                    <td>{r.userEmail}</td>
-                    <td>{r.correctCount} / {r.totalQuestions} ({pct}%)</td>
-                    <td className={passed ? 'pass-text' : 'fail-text'}>
-                      {passed ? 'Passed' : 'Failed'}
-                    </td>
-                    <td>{r.autoSubmitted ? 'Timed out' : 'Submitted'}</td>
-                    <td>
-                      <button className="link-btn-danger" onClick={() => handleDelete(r)}>
-                        Delete &amp; reopen
-                      </button>
-                    </td>
-                  </tr>
+                  <Fragment key={r.id}>
+                    <tr>
+                      <td>{r.userEmail}</td>
+                      <td>{r.correctCount} / {r.totalQuestions} ({pct}%)</td>
+                      <td className={passed ? 'pass-text' : 'fail-text'}>
+                        {passed ? 'Passed' : 'Failed'}
+                      </td>
+                      <td>{r.autoSubmitted ? 'Timed out' : 'Submitted'}</td>
+                      <td>
+                        <button
+                          className="link-btn"
+                          onClick={() => setExpandedResultId(expanded ? null : r.id)}
+                        >
+                          {expanded ? 'Hide answers' : 'View answers'}
+                        </button>{' '}
+                        <button className="link-btn-danger" onClick={() => handleDelete(r)}>
+                          Delete &amp; reopen
+                        </button>
+                      </td>
+                    </tr>
+                    {expanded && (
+                      <tr>
+                        <td colSpan={5}>
+                          <AnswerBreakdown answers={r.answers || []} questionsById={questionsById} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 )
               })}
             </tbody>
@@ -192,6 +216,63 @@ function StatCard({ label, value, sub, accent }) {
       <p className="muted">{label}</p>
       <p className={'stat-value' + (accent ? ' stat-value-accent' : '')}>{value}</p>
       {sub && <p className="muted stat-sub">{sub}</p>}
+    </div>
+  )
+}
+
+// Per-question detail for one attendee's attempt: their answer log
+// (`{ questionId, selectedIndex, correct }`) joined against the exam's
+// current question pool. A question can have been edited or deleted since
+// the attempt, so it's looked up by ID rather than assumed still present.
+function AnswerBreakdown({ answers, questionsById }) {
+  if (answers.length === 0) return <p className="muted">No answers recorded.</p>
+
+  return (
+    <div className="answer-breakdown">
+      {answers.map((a, i) => {
+        const question = questionsById[a.questionId]
+        if (!question) {
+          return (
+            <div key={a.questionId + i} className="answer-breakdown-item">
+              <p className="question-text">
+                Question {i + 1}{' '}
+                <span className="muted">(no longer exists in the question pool)</span>
+              </p>
+              <p className={a.correct ? 'pass-text' : 'fail-text'}>
+                {a.selectedIndex === -1 ? 'Not answered' : a.correct ? 'Correct' : 'Incorrect'}
+              </p>
+            </div>
+          )
+        }
+        return (
+          <div key={a.questionId + i} className="answer-breakdown-item">
+            <p className="question-text">
+              Question {i + 1}: {question.text}
+            </p>
+            <div className="option-list">
+              {question.options.map((opt, idx) => {
+                const isSelected = idx === a.selectedIndex
+                const isCorrectOption = idx === question.correctIndex
+                return (
+                  <div
+                    key={idx}
+                    className={
+                      'option-btn' +
+                      (isCorrectOption ? ' answer-option-correct' : '') +
+                      (isSelected && !isCorrectOption ? ' answer-option-wrong' : '')
+                    }
+                  >
+                    {opt}
+                    {isSelected && ' — selected'}
+                    {isCorrectOption && ' ✓'}
+                  </div>
+                )
+              })}
+            </div>
+            {a.selectedIndex === -1 && <p className="fail-text">Not answered</p>}
+          </div>
+        )
+      })}
     </div>
   )
 }

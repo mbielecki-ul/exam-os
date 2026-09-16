@@ -123,9 +123,11 @@ at `https://mbielecki-ul.github.io/exam-os/`.
     as you like — questions accumulate in the pool, so re-uploading a file
     adds to the existing questions rather than replacing them; delete
     individual questions from **Manage questions** if you need to remove
-    old ones. Each exam attempt draws
-    50 random questions from whatever's currently in that exam's pool (or
-    fewer, if the pool has less than 50).
+    old ones. Each exam attempt draws a configurable number of random
+    questions (default 50, editable per exam — including exams created
+    before this setting existed, which fall back to 50 until changed) from
+    whatever's currently in that exam's pool, capped at the pool size if
+    it has fewer questions than that.
   - **View overview** (per exam, from the exams list): attendee count,
     total correct/wrong answers across everyone, how many passed vs.
     failed (pass threshold is 66% correct, see `PASS_THRESHOLD` in

@@ -17,6 +17,7 @@ export default function AdminExamStats() {
   const [results, setResults] = useState(null)
   const [questionsById, setQuestionsById] = useState({})
   const [expandedResultId, setExpandedResultId] = useState(null)
+  const [showWrongOnly, setShowWrongOnly] = useState(false)
   const [error, setError] = useState('')
 
   // Load the full exam list once, so the selector below can switch between
@@ -155,7 +156,12 @@ export default function AdminExamStats() {
 
       {stats.attendees > 0 && (
         <div className="card">
-          <h2>Attendees</h2>
+          <div className="admin-header">
+            <h2>Attendees</h2>
+            <button className="link-btn" onClick={() => setShowWrongOnly((v) => !v)}>
+              {showWrongOnly ? 'Show all answers' : 'Show wrong answers only'}
+            </button>
+          </div>
           <table className="results-table">
             <thead>
               <tr>
@@ -195,7 +201,11 @@ export default function AdminExamStats() {
                     {expanded && (
                       <tr>
                         <td colSpan={5}>
-                          <AnswerBreakdown answers={r.answers || []} questionsById={questionsById} />
+                          <AnswerBreakdown
+                            answers={r.answers || []}
+                            questionsById={questionsById}
+                            wrongOnly={showWrongOnly}
+                          />
                         </td>
                       </tr>
                     )}
@@ -224,12 +234,18 @@ function StatCard({ label, value, sub, accent }) {
 // (`{ questionId, selectedIndex, correct }`) joined against the exam's
 // current question pool. A question can have been edited or deleted since
 // the attempt, so it's looked up by ID rather than assumed still present.
-function AnswerBreakdown({ answers, questionsById }) {
+function AnswerBreakdown({ answers, questionsById, wrongOnly }) {
   if (answers.length === 0) return <p className="muted">No answers recorded.</p>
+
+  const visible = wrongOnly
+    ? answers.map((a, i) => ({ a, i })).filter(({ a }) => !a.correct)
+    : answers.map((a, i) => ({ a, i }))
+
+  if (visible.length === 0) return <p className="muted">No wrong answers — all correct.</p>
 
   return (
     <div className="answer-breakdown">
-      {answers.map((a, i) => {
+      {visible.map(({ a, i }) => {
         const question = questionsById[a.questionId]
         if (!question) {
           return (

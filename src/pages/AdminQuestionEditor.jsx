@@ -7,6 +7,7 @@ import {
   updateQuestion,
   deleteQuestion,
 } from '../lib/exams'
+import { exportQuestionsToXlsx } from '../lib/parseQuestions'
 
 const EMPTY_FORM = { text: '', options: ['', '', '', ''], correctIndex: 0, category: '' }
 
@@ -121,7 +122,15 @@ export default function AdminQuestionEditor() {
     <div className="page">
       <div className="admin-header">
         <h1>{exam ? exam.name : 'Exam'} — Questions</h1>
-        <Link className="button" to="/admin/questions">Back to exams</Link>
+        <div className="exam-admin-actions">
+          <button
+            disabled={questions.length === 0}
+            onClick={() => exportQuestionsToXlsx(exam?.name, questions)}
+          >
+            Export to Excel
+          </button>
+          <Link className="button" to="/admin/questions">Back to exams</Link>
+        </div>
       </div>
 
       <div className="filter-row">

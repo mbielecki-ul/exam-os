@@ -62,6 +62,26 @@ function rowsToQuestions(rows, errors) {
   return questions
 }
 
+// Exports questions to an .xlsx file using the same columns the importer
+// reads (question,option1-4,correctOption,category), so an exported file
+// can be re-uploaded as-is. Triggers a browser download.
+export function exportQuestionsToXlsx(examName, questions) {
+  const rows = questions.map((q) => ({
+    question: q.text,
+    option1: q.options[0],
+    option2: q.options[1],
+    option3: q.options[2],
+    option4: q.options[3],
+    correctOption: q.correctIndex + 1,
+    category: q.category || 'Uncategorized',
+  }))
+  const sheet = XLSX.utils.json_to_sheet(rows)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Questions')
+  const safeName = (examName || 'exam').replace(/[\\/:*?"<>|]/g, '_').trim() || 'exam'
+  XLSX.writeFile(workbook, `${safeName}-questions.xlsx`)
+}
+
 function normalize(text, options, correctIndex, category, i) {
   if (!text || !Array.isArray(options) || options.some((o) => o === '' || o == null) || options.length !== 4) {
     return { error: `Row ${i + 1}: question needs text and exactly 4 answer options.` }

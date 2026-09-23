@@ -134,7 +134,11 @@ at `https://mbielecki-ul.github.io/exam-os/`.
   - **Manage questions** (per exam, from the exams list): view every
     question one by one, filter by category, edit a question's text,
     options, correct answer, or category in place, add a single question
-    manually, or delete one — no re-upload needed for small fixes.
+    manually, or delete one — no re-upload needed for small fixes. An
+    "Export to Excel" button downloads every question in that exam's pool
+    as a single `.xlsx` file, using the same columns as upload
+    (`question,option1,option2,option3,option4,correctOption,category`),
+    so it can be edited and re-uploaded as-is.
 
 ## Local development
 

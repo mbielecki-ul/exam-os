@@ -66,5 +66,12 @@ service cloud.firestore {
       allow read: if isAdmin() || (isSignedIn() && resource.data.userEmail == request.auth.token.email);
       allow update, delete: if isAdmin();
     }
+
+    // Outgoing email queue for the "Trigger Email from Firestore" extension.
+    // Only the emailResultOnCreate Cloud Function writes here (the Admin SDK
+    // bypasses these rules), so no browser may read or queue mail.
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
   }
 }

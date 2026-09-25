@@ -90,39 +90,53 @@ at `https://mbielecki-ul.github.io/exam-os/`.
 
 ### 6. (Optional) Result emails
 
-Every finished exam (manual finish, timeout, or leaving mid-exam) can send
-an email with the participant's address and their result. Since there's
-no server, this goes through [EmailJS](https://www.emailjs.com) straight
-from the browser (free tier: 200 emails/month). Without the three secrets
-below, the feature stays off and nothing else changes.
+Every finished exam (manual finish, timeout, or leaving mid-exam) sends an
+email with the participant's address and their result (Passed in green,
+Failed in red). It's sent server-side, not from the participant's browser,
+so company web filters can't block it and participants can't fake it:
 
-1. Sign up at emailjs.com → **Email Services → Add New Service** → connect
-   the mailbox that should send the mails (e.g. Gmail or Outlook). Note
-   the **Service ID**.
-2. **Email Templates → Create New Template**. Set **To Email** to the
-   address that should get the notifications (e.g. the admin mailbox; use
-   `{{participant_email}}` instead, or as a CC, if participants should get
-   a copy). Subject/body can use these variables:
+1. The browser saves the result to Firestore as usual.
+2. The Cloud Function `emailResultOnCreate` (`functions/index.js`) fires
+   on every new result and writes the email into the `mail` collection.
+3. Firebase's **Trigger Email from Firestore** extension sends it over
+   SMTP and records the delivery status on that `mail` document.
 
-   | Variable | Example |
-   | --- | --- |
-   | `{{participant_email}}` | `jane.doe@ul.com` |
-   | `{{exam_name}}` | `Safety Basics` |
-   | `{{correct_count}}` / `{{total_questions}}` | `42` / `50` |
-   | `{{score_percent}}` | `84` |
-   | `{{result}}` | `Passed` or `Failed` (66% threshold) |
-   | `{{result_color}}` / `{{result_bg}}` | text / background colour for the result: green (`#166534` / `#dcfce7`) or red (`#991b1b` / `#fee2e2`) |
-   | `{{duration}}` | `23 min 5 s` |
-   | `{{submission_type}}` | `Submitted manually` / `Auto-submitted (…)` |
-   | `{{submitted_at}}` | `2026-09-25 12:34 UTC` |
+This needs the Firebase **Blaze** plan (Cloud Functions). At this volume
+it stays within the free allowance; set a budget alert anyway (Google
+Cloud Console → Billing → Budgets & alerts, e.g. €1).
 
-   Example subject: `{{exam_name}}: {{participant_email}} {{result}} ({{score_percent}}%)`.
-   Note the **Template ID**.
-3. **Account → General**: note the **Public Key**. Under **Account →
-   Security**, restrict API requests to the app's domain
-   (`mbielecki-ul.github.io`) so the key can't be used from elsewhere.
-4. Add GitHub secrets `VITE_EMAILJS_SERVICE_ID`,
-   `VITE_EMAILJS_TEMPLATE_ID`, `VITE_EMAILJS_PUBLIC_KEY` and redeploy.
+One-time setup:
+
+1. **SMTP login** for the sending mailbox. For Gmail: turn on 2-Step
+   Verification and create an **app password** at
+   <https://myaccount.google.com/apppasswords>.
+2. **Install the extension**: Firebase console → Extensions → *Trigger
+   Email from Firestore*. Use the Firestore database's region, auth type
+   *Username & Password*, SMTP URI `smtps://you@gmail.com@smtp.gmail.com:465`,
+   the app password, email documents collection **`mail`**, and a default
+   FROM address such as `exam-os <you@gmail.com>`.
+3. **GitHub secret** `RESULT_EMAIL_TO`: who receives the emails
+   (comma-separated for several).
+4. **GitHub repository variables** (same settings page, *Variables* tab):
+   - `FUNCTIONS_REGION`: the region matching your Firestore database
+     (`us-central1` for `nam5`, `europe-west1` for `eur3`, or the
+     database's own region if single-region). Default `us-central1`.
+   - `MAIL_TIMEZONE` (optional): e.g. `Europe/Vienna` for the "Submitted
+     at" time. Default UTC.
+5. **Deploy permissions**: the service account in `FIREBASE_SERVICE_ACCOUNT`
+   deploys the function via `.github/workflows/deploy-functions.yml` and
+   needs these extra roles (Google Cloud Console → IAM → edit that
+   service account): *Cloud Functions Admin*, *Cloud Run Admin*,
+   *Service Account User*, *Artifact Registry Administrator*,
+   *Eventarc Admin*.
+6. Run **Deploy Cloud Functions** once from the Actions tab (it also runs
+   automatically whenever `functions/` changes on `main`).
+
+Troubleshooting: every queued email is a document in the `mail`
+collection (Firebase console → Firestore). Its `delivery.state` shows
+`SUCCESS` or `ERROR`, with the SMTP error in `delivery.error`. If there's
+no `mail` document at all for a result, check the function's logs
+(Firebase console → Functions → emailResultOnCreate → Logs).
 
 ## Using it
 
@@ -216,15 +230,6 @@ npm run dev
   needs extra history-manipulation plumbing that felt like overkill for an
   internal tool. Test each of these paths once when adding a new exam if
   this matters to you operationally.
-- **Result emails are sent from the participant's browser**, best effort.
-  The saved result in Firestore is the source of truth: if the email
-  fails (EmailJS quota, network, or someone blocking the request in
-  devtools), the result still shows up on the admin Results page. The
-  public key is visible in the page source; with a fixed **To Email** in
-  the template it can only ever mail that one address. If you put
-  `{{participant_email}}` in To/CC, someone could abuse it to send the
-  template to arbitrary addresses (up to your EmailJS quota), so the
-  domain restriction in step 6.3 matters more in that setup.
 - **Magic link expiry** is fixed by Firebase (~1 hour), not exactly
   configurable to a specific number of hours.
 - **Grading happens in the browser**, so a technically curious employee

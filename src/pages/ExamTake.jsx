@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { listAllExams, listQuestions, pickRandomQuestions, DEFAULT_QUESTION_COUNT } from '../lib/exams'
 import { submitResult, getOwnResultForExam } from '../lib/results'
-import { sendResultEmail } from '../lib/notify'
 import { examAllowsEmail } from '../lib/emailDomain'
 import { loadExamProgress, saveExamProgress, clearExamProgress } from '../lib/examProgress'
 import { useAuth } from '../context/AuthContext'
@@ -123,7 +122,7 @@ export default function ExamTake() {
         return { questionId: q.id, selectedIndex, correct }
       })
 
-      const { durationSeconds } = await submitResult({
+      await submitResult({
         userEmail: user.email,
         userUid: user.uid,
         examId,
@@ -132,17 +131,6 @@ export default function ExamTake() {
         totalQuestions: questions.length,
         correctCount,
         answers: answerLog,
-        autoSubmitted: auto,
-      })
-
-      // Deliberately not awaited — the result is already saved, so the
-      // participant shouldn't wait on (or see an error from) the email.
-      sendResultEmail({
-        participantEmail: user.email,
-        examName: exam.name,
-        correctCount,
-        totalQuestions: questions.length,
-        durationSeconds,
         autoSubmitted: auto,
       })
 
@@ -169,16 +157,6 @@ export default function ExamTake() {
         try {
           const existing = await getOwnResultForExam(examId, user.uid)
           if (existing) {
-            // The first write landed but its confirmation was lost, so the
-            // email after it never went out — send it now from the saved result.
-            sendResultEmail({
-              participantEmail: user.email,
-              examName: existing.examName,
-              correctCount: existing.correctCount,
-              totalQuestions: existing.totalQuestions,
-              durationSeconds: existing.durationSeconds,
-              autoSubmitted: existing.autoSubmitted,
-            })
             clearExamProgress(examId, user.uid)
             unregisterExam()
             navigate(`/exam/${examId}/done`, {

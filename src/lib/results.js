@@ -56,7 +56,6 @@ export async function submitResult({
     answers, // [{ questionId, selectedIndex, correct }]
     autoSubmitted, // true when the time limit ran out
   })
-  return { durationSeconds }
 }
 
 // Total number of results across all exams, via Firestore's server-side

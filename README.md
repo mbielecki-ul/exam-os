@@ -111,6 +111,7 @@ below, the feature stays off and nothing else changes.
    | `{{correct_count}}` / `{{total_questions}}` | `42` / `50` |
    | `{{score_percent}}` | `84` |
    | `{{result}}` | `Passed` or `Failed` (66% threshold) |
+   | `{{result_color}}` / `{{result_bg}}` | text / background colour for the result: green (`#166534` / `#dcfce7`) or red (`#991b1b` / `#fee2e2`) |
    | `{{duration}}` | `23 min 5 s` |
    | `{{submission_type}}` | `Submitted manually` / `Auto-submitted (…)` |
    | `{{submitted_at}}` | `2026-09-25 12:34 UTC` |

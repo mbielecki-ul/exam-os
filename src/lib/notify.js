@@ -23,13 +23,17 @@ export async function sendResultEmail({
   if (!resultEmailEnabled) return
 
   const ratio = totalQuestions > 0 ? correctCount / totalQuestions : 0
+  const passed = ratio >= PASS_THRESHOLD
   const templateParams = {
     participant_email: participantEmail,
     exam_name: examName,
     correct_count: correctCount,
     total_questions: totalQuestions,
     score_percent: Math.round(ratio * 100),
-    result: ratio >= PASS_THRESHOLD ? 'Passed' : 'Failed',
+    result: passed ? 'Passed' : 'Failed',
+    // Inline-style colours for the result badge in the email template.
+    result_color: passed ? '#166534' : '#991b1b',
+    result_bg: passed ? '#dcfce7' : '#fee2e2',
     duration: formatDuration(durationSeconds),
     submission_type: autoSubmitted ? 'Auto-submitted (time ran out or left the exam)' : 'Submitted manually',
     submitted_at: new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC',

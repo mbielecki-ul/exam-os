@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { countAllResults, listResultsPage, summarizeExamResults, deleteResult } from '../lib/results'
+import { listAllExams } from '../lib/exams'
 import ExamBarChart from '../components/ExamBarChart'
 
 const PASS_COLOR = '#5fd0a3'
@@ -15,6 +16,8 @@ export default function AdminDashboard() {
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [examFilter, setExamFilter] = useState('all')
+  const [archivedExamIds, setArchivedExamIds] = useState(new Set())
+  const [showArchived, setShowArchived] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -27,7 +30,12 @@ export default function AdminDashboard() {
   // (see listResultsPage() in src/lib/results.js).
   async function refresh() {
     try {
-      const [count, page] = await Promise.all([countAllResults(), listResultsPage()])
+      const [count, page, exams] = await Promise.all([
+        countAllResults(),
+        listResultsPage(),
+        listAllExams(),
+      ])
+      setArchivedExamIds(new Set(exams.filter((e) => e.archived).map((e) => e.id)))
       setTotalCount(count)
       setResults(page.results)
       setCursor(page.cursor)
@@ -62,16 +70,31 @@ export default function AdminDashboard() {
     await refresh()
   }
 
-  const examNames = useMemo(() => {
+  // Results of archived exams stay in Firestore; they're just left out here
+  // unless the admin explicitly asks to see them.
+  const visibleResults = useMemo(() => {
     if (!results) return []
-    return [...new Set(results.map((r) => r.examName))]
-  }, [results])
+    if (showArchived) return results
+    return results.filter((r) => !archivedExamIds.has(r.examId))
+  }, [results, showArchived, archivedExamIds])
+
+  const examNames = useMemo(
+    () => [...new Set(visibleResults.map((r) => r.examName))],
+    [visibleResults]
+  )
 
   const filtered = useMemo(() => {
-    if (!results) return []
-    if (examFilter === 'all') return results
-    return results.filter((r) => r.examName === examFilter)
-  }, [results, examFilter])
+    if (examFilter === 'all') return visibleResults
+    return visibleResults.filter((r) => r.examName === examFilter)
+  }, [visibleResults, examFilter])
+
+  const hiddenArchivedCount = results ? results.length - visibleResults.length : 0
+
+  function toggleShowArchived(checked) {
+    setShowArchived(checked)
+    // The selected exam may be archived and about to disappear from the list.
+    if (!checked) setExamFilter('all')
+  }
 
   const stats = useMemo(() => summarizeExamResults(filtered), [filtered])
   const totalAnswers = stats.totalCorrect + stats.totalWrong
@@ -127,6 +150,15 @@ export default function AdminDashboard() {
             ))}
           </select>
         </label>
+        <label className="muted">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => toggleShowArchived(e.target.checked)}
+          />{' '}
+          Show archived exams
+          {!showArchived && hiddenArchivedCount > 0 && ` (${hiddenArchivedCount} hidden)`}
+        </label>
         <span className="muted">{filtered.length} result(s)</span>
       </div>
 
@@ -172,7 +204,10 @@ export default function AdminDashboard() {
           {filtered.map((r) => (
             <tr key={r.id}>
               <td>{r.userEmail}</td>
-              <td><Link to={`/admin/exams/${r.examId}`}>{r.examName}</Link></td>
+              <td>
+                <Link to={`/admin/exams/${r.examId}`}>{r.examName}</Link>
+                {archivedExamIds.has(r.examId) && <span className="badge-archived">Archived</span>}
+              </td>
               <td>
                 {r.correctCount} / {r.totalQuestions} (
                 {Math.round((r.correctCount / r.totalQuestions) * 100)}%)

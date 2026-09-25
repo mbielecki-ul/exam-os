@@ -58,6 +58,21 @@ export async function setExamActive(examId, active) {
   await updateDoc(doc(db, EXAMS, examId), { active })
 }
 
+// Archiving also deactivates, so the exam disappears from the employee
+// list. Unarchiving leaves it inactive; the admin re-activates explicitly.
+// Results are untouched either way; the admin views just filter them.
+export async function archiveExam(examId) {
+  await updateDoc(doc(db, EXAMS, examId), {
+    archived: true,
+    active: false,
+    archivedAt: serverTimestamp(),
+  })
+}
+
+export async function unarchiveExam(examId) {
+  await updateDoc(doc(db, EXAMS, examId), { archived: false })
+}
+
 export async function deleteExam(examId) {
   await deleteDoc(doc(db, EXAMS, examId))
 }

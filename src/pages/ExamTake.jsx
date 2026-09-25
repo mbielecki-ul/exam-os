@@ -39,6 +39,7 @@ export default function ExamTake() {
         const exams = await listAllExams()
         const found = exams.find((e) => e.id === examId)
         if (!found) throw new Error('Exam not found.')
+        if (found.archived) throw new Error('This exam has been archived and can no longer be taken.')
 
         // Domain-restricted exams: the list page already hides these from
         // people outside the allowed domains, but a direct link would

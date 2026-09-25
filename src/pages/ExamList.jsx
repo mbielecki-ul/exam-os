@@ -16,7 +16,7 @@ export default function ExamList() {
       .then(([e, r]) => {
         // Only show exams this person's email domain is actually allowed
         // to take (an exam with no allowedDomains is open to everyone).
-        setExams(e.filter((exam) => examAllowsEmail(exam, user.email)))
+        setExams(e.filter((exam) => !exam.archived && examAllowsEmail(exam, user.email)))
         setOwnResults(r)
       })
       .catch((err) => setError(err.message))

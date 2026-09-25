@@ -27,6 +27,12 @@ service cloud.firestore {
       return domains == null || domains.size() == 0 || domains.hasAny([email.split('@')[1]]);
     }
 
+    // Archived exams take no new results. Exams created before archiving
+    // existed have no `archived` field, hence the default.
+    function examNotArchived(examId) {
+      return get(/databases/$(database)/documents/exams/$(examId)).data.get('archived', false) != true;
+    }
+
     // Exams: any logged-in employee can read; only the admin can write.
     match /exams/{examId} {
       allow read: if isSignedIn();
@@ -55,7 +61,8 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.userEmail == request.auth.token.email
         && resultId == request.resource.data.examId + '_' + request.auth.uid
-        && examAllowsEmail(request.resource.data.examId, request.auth.token.email);
+        && examAllowsEmail(request.resource.data.examId, request.auth.token.email)
+        && examNotArchived(request.resource.data.examId);
       allow read: if isAdmin() || (isSignedIn() && resource.data.userEmail == request.auth.token.email);
       allow update, delete: if isAdmin();
     }

@@ -144,7 +144,12 @@ below, the feature stays off and nothing else changes.
     confirmed. The same action is also available per-attendee on each
     exam's **Overview** page. Results of archived exams (see below) are
     hidden here by default; tick **Show archived exams** to include them.
-  - **Manage exams & questions**: create new exams (each needs a time limit
+  - **Manage exams & questions**: each exam is shown as a collapsed row
+    (name, question count, active/inactive, time limit, plus **View
+    overview** / **Manage questions**). Click the name to expand its
+    settings, activate/archive/delete buttons and upload field, or use
+    **Expand all** / **Collapse all**. A newly created exam opens
+    automatically. From there: create new exams (each needs a time limit
     in minutes — shown to employees as a countdown once they start, and
     enforced: when it reaches zero the exam auto-submits and every
     unanswered question counts as incorrect), optionally restrict an exam

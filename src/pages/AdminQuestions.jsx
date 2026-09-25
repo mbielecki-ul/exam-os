@@ -30,6 +30,17 @@ export default function AdminQuestions() {
   const [questionCountDrafts, setQuestionCountDrafts] = useState({}) // examId -> string being edited
   const [uploadTarget, setUploadTarget] = useState({}) // examId -> {status, message}
   const [showArchived, setShowArchived] = useState(false)
+  // Exam cards start collapsed to keep the page short; ids here are expanded.
+  const [expanded, setExpanded] = useState(() => new Set())
+
+  function toggleExpanded(examId) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(examId)) next.delete(examId)
+      else next.add(examId)
+      return next
+    })
+  }
   const [error, setError] = useState('')
 
   async function refresh() {
@@ -46,7 +57,7 @@ export default function AdminQuestions() {
   async function handleCreateExam(e) {
     e.preventDefault()
     if (!newName.trim()) return
-    await createExam({
+    const newExamId = await createExam({
       name: newName.trim(),
       description: newDesc.trim(),
       timeLimitMinutes: newTimeLimit,
@@ -58,6 +69,8 @@ export default function AdminQuestions() {
     setNewTimeLimit('60')
     setNewDomains('')
     setNewQuestionCount(String(DEFAULT_QUESTION_COUNT))
+    // Open the new exam so its upload field is right there.
+    setExpanded((prev) => new Set(prev).add(newExamId))
     await refresh()
   }
 
@@ -203,17 +216,56 @@ export default function AdminQuestions() {
         </p>
       </div>
 
+      {currentExams.length > 1 && (
+        <div className="exam-collapse-controls">
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => setExpanded(new Set(currentExams.map((e) => e.id)))}
+          >
+            Expand all
+          </button>
+          <button type="button" className="link-btn" onClick={() => setExpanded(new Set())}>
+            Collapse all
+          </button>
+        </div>
+      )}
+
       <div className="exam-admin-list">
-        {currentExams.map((exam) => (
-          <div key={exam.id} className="card">
+        {currentExams.map((exam) => {
+          const isOpen = expanded.has(exam.id)
+          const hasUnsaved =
+            timeLimitDrafts[exam.id] !== undefined ||
+            questionCountDrafts[exam.id] !== undefined ||
+            domainDrafts[exam.id] !== undefined
+          return (
+          <div key={exam.id} className="card exam-admin-card">
+            <div className="exam-admin-summary">
+              <button
+                type="button"
+                className="exam-collapse-toggle"
+                aria-expanded={isOpen}
+                onClick={() => toggleExpanded(exam.id)}
+              >
+                <span className="exam-collapse-chevron" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+                <span className="exam-collapse-title">{exam.name}</span>
+                <span className="muted exam-collapse-meta">
+                  {counts[exam.id] ?? '…'} question(s) · {exam.active ? 'active' : 'inactive'}
+                  {exam.timeLimitMinutes ? ` · ${exam.timeLimitMinutes} min` : ''}
+                  {!isOpen && hasUnsaved && <span className="error-text"> · unsaved changes</span>}
+                </span>
+              </button>
+              <div className="exam-admin-actions">
+                <Link className="button" to={`/admin/exams/${exam.id}`}>View overview</Link>
+                <Link className="button" to={`/admin/questions/${exam.id}`}>Manage questions</Link>
+              </div>
+            </div>
+
+            {isOpen && (
+            <div className="exam-admin-details">
             <div className="exam-admin-row">
               <div>
-                <h2>{exam.name}</h2>
                 {exam.description && <p className="muted">{exam.description}</p>}
-                <p className="muted">
-                  {counts[exam.id] ?? '…'} question(s) in pool ·{' '}
-                  {exam.active ? 'active' : 'inactive'}
-                </p>
                 <div className="time-limit-row">
                   <label className="muted">
                     Time limit (minutes):{' '}
@@ -280,8 +332,6 @@ export default function AdminQuestions() {
                 </div>
               </div>
               <div className="exam-admin-actions">
-                <Link className="button" to={`/admin/exams/${exam.id}`}>View overview</Link>
-                <Link className="button" to={`/admin/questions/${exam.id}`}>Manage questions</Link>
                 <button onClick={() => handleToggleActive(exam)}>
                   {exam.active ? 'Deactivate' : 'Activate'}
                 </button>
@@ -309,8 +359,11 @@ export default function AdminQuestions() {
                 </p>
               )}
             </div>
+            </div>
+            )}
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {archivedExams.length > 0 && (

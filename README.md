@@ -142,7 +142,8 @@ below, the feature stays off and nothing else changes.
     person's one attempt at that exam, so they can take it again. This is
     the only way to let someone retake an exam; there's no undo once
     confirmed. The same action is also available per-attendee on each
-    exam's **Overview** page.
+    exam's **Overview** page. Results of archived exams (see below) are
+    hidden here by default; tick **Show archived exams** to include them.
   - **Manage exams & questions**: create new exams (each needs a time limit
     in minutes — shown to employees as a countdown once they start, and
     enforced: when it reaches zero the exam auto-submits and every
@@ -164,6 +165,15 @@ below, the feature stays off and nothing else changes.
     before this setting existed, which fall back to 50 until changed) from
     whatever's currently in that exam's pool, capped at the pool size if
     it has fewer questions than that.
+  - **Archive** (per exam, from the exams list): for exams that are
+    finished but whose history you want to keep. Archiving deactivates the
+    exam, hides it from employees, and moves it into a collapsed
+    **Show archived exams** section at the bottom of the list. Its results
+    stay in the database but are hidden from the Results page by default.
+    Nothing is deleted: its **View overview** page still works, and
+    **Unarchive** brings it back (inactive; activate it again if it should
+    be open for new attempts). `firestore.rules` also rejects new results
+    for archived exams, so a stale open tab can't submit to one.
   - **View overview** (per exam, from the exams list): attendee count,
     total correct/wrong answers across everyone, how many passed vs.
     failed (pass threshold is 66% correct, see `PASS_THRESHOLD` in

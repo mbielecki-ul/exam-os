@@ -98,7 +98,10 @@ export default function AdminExamStats() {
   return (
     <div className="page">
       <div className="admin-header">
-        <h1>{exam ? exam.name : 'Exam'} — Overview</h1>
+        <h1>
+          {exam ? exam.name : 'Exam'} — Overview
+          {exam?.archived && <span className="badge-archived">Archived</span>}
+        </h1>
         <Link className="button" to="/admin/questions">Back to exams</Link>
       </div>
 

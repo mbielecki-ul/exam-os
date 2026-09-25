@@ -7,6 +7,8 @@ import {
   updateExamTimeLimit,
   updateExamDomains,
   updateExamQuestionCount,
+  archiveExam,
+  unarchiveExam,
   deleteExam,
   countQuestions,
   addQuestions,
@@ -27,6 +29,7 @@ export default function AdminQuestions() {
   const [domainDrafts, setDomainDrafts] = useState({}) // examId -> string being edited
   const [questionCountDrafts, setQuestionCountDrafts] = useState({}) // examId -> string being edited
   const [uploadTarget, setUploadTarget] = useState({}) // examId -> {status, message}
+  const [showArchived, setShowArchived] = useState(false)
   const [error, setError] = useState('')
 
   async function refresh() {
@@ -99,6 +102,23 @@ export default function AdminQuestions() {
     await refresh()
   }
 
+  async function handleArchive(exam) {
+    const confirmed = window.confirm(
+      `Archive "${exam.name}"?\n\n` +
+        `It will be deactivated and hidden from employees, and its results will be ` +
+        `hidden from the Results page (still viewable via "Show archived exams"). ` +
+        `Nothing is deleted, and you can unarchive it any time.`
+    )
+    if (!confirmed) return
+    await archiveExam(exam.id)
+    await refresh()
+  }
+
+  async function handleUnarchive(exam) {
+    await unarchiveExam(exam.id)
+    await refresh()
+  }
+
   async function handleDelete(exam) {
     if (!window.confirm(`Really delete exam "${exam.name}"? Its questions will be kept.`)) return
     await deleteExam(exam.id)
@@ -126,6 +146,9 @@ export default function AdminQuestions() {
 
   if (error) return <div className="page"><p className="error-text">{error}</p></div>
   if (!exams) return <div className="page"><p>Loading …</p></div>
+
+  const currentExams = exams.filter((e) => !e.archived)
+  const archivedExams = exams.filter((e) => e.archived)
 
   return (
     <div className="page">
@@ -181,7 +204,7 @@ export default function AdminQuestions() {
       </div>
 
       <div className="exam-admin-list">
-        {exams.map((exam) => (
+        {currentExams.map((exam) => (
           <div key={exam.id} className="card">
             <div className="exam-admin-row">
               <div>
@@ -262,6 +285,7 @@ export default function AdminQuestions() {
                 <button onClick={() => handleToggleActive(exam)}>
                   {exam.active ? 'Deactivate' : 'Activate'}
                 </button>
+                <button onClick={() => handleArchive(exam)}>Archive</button>
                 <button onClick={() => handleDelete(exam)}>Delete</button>
               </div>
             </div>
@@ -289,6 +313,37 @@ export default function AdminQuestions() {
         ))}
       </div>
 
+      {archivedExams.length > 0 && (
+        <div className="archived-section">
+          <button className="link-btn" onClick={() => setShowArchived((v) => !v)}>
+            {showArchived ? 'Hide' : 'Show'} archived exams ({archivedExams.length})
+          </button>
+          {showArchived && (
+            <div className="exam-admin-list">
+              {archivedExams.map((exam) => (
+                <div key={exam.id} className="card card-archived">
+                  <div className="exam-admin-row">
+                    <div>
+                      <h2>{exam.name} <span className="badge-archived">Archived</span></h2>
+                      {exam.description && <p className="muted">{exam.description}</p>}
+                      <p className="muted">
+                        {counts[exam.id] ?? '…'} question(s) in pool
+                        {exam.archivedAt && <> · archived {formatDate(exam.archivedAt)}</>}
+                      </p>
+                    </div>
+                    <div className="exam-admin-actions">
+                      <Link className="button" to={`/admin/exams/${exam.id}`}>View overview</Link>
+                      <button onClick={() => handleUnarchive(exam)}>Unarchive</button>
+                      <button onClick={() => handleDelete(exam)}>Delete</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="card">
         <h2>File format</h2>
         <p className="muted">
@@ -314,4 +369,9 @@ export default function AdminQuestions() {
       </div>
     </div>
   )
+}
+
+function formatDate(ts) {
+  const date = ts.toDate ? ts.toDate() : new Date(ts)
+  return date.toLocaleDateString('en-GB')
 }

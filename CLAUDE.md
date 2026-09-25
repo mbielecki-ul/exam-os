@@ -85,7 +85,11 @@ before. Whenever you touch either, diff them against each other.
   everyone), `questionCount` (how many random questions an attempt draws;
   missing on exams created before this field existed — treat as
   `DEFAULT_QUESTION_COUNT` from `src/lib/exams.js`, currently 50),
-  `createdAt`.
+  `archived` / `archivedAt` (missing = not archived; `archiveExam()` also
+  sets `active: false`), `createdAt`. Archiving never touches results:
+  `AdminDashboard` hides results whose exam is archived unless "Show
+  archived exams" is ticked, and `examNotArchived()` in `firestore.rules`
+  blocks new results for archived exams.
 - `questions/{questionId}` — `examId`, `text`, `options` (array of exactly
   4), `correctIndex` (0-3), `category` (defaults to `"Uncategorized"`),
   `createdAt`.

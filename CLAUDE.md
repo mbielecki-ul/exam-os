@@ -151,6 +151,11 @@ Changing the rule for who may take a restricted exam means editing both.
   and manual finish are three ways into one submit function. If you touch
   `handleSubmit`, check all three call sites still make sense. Unanswered
   questions resolve to `selectedIndex = -1` and count as incorrect.
+- After a successful submit (and in the lost-confirmation recovery path),
+  `sendResultEmail()` from `src/lib/notify.js` fires a result email via
+  EmailJS's REST API, not awaited and never throwing. It's a no-op when
+  the `VITE_EMAILJS_*` env vars are unset. Client-side and best-effort
+  by design (no server); Firestore stays the source of truth.
 - `ExamGuardContext` intercepts in-app navigation (nav bar, sign out) with
   a custom modal (`LeaveExamModal`), but **cannot** intercept the browser
   back button, and can only show a generic (non-custom) message on

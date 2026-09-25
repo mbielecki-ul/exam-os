@@ -250,8 +250,9 @@ export default function AdminQuestions() {
                 <span className="exam-collapse-chevron" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
                 <span className="exam-collapse-title">{exam.name}</span>
                 <span className="muted exam-collapse-meta">
-                  {counts[exam.id] ?? '…'} question(s) · {exam.active ? 'active' : 'inactive'}
+                  {counts[exam.id] ?? '…'} in pool · {exam.active ? 'active' : 'inactive'}
                   {exam.timeLimitMinutes ? ` · ${exam.timeLimitMinutes} min` : ''}
+                  {` (${questionsPerAttempt(exam, counts[exam.id])} questions)`}
                   {!isOpen && hasUnsaved && <span className="error-text"> · unsaved changes</span>}
                 </span>
               </button>
@@ -422,6 +423,12 @@ export default function AdminQuestions() {
       </div>
     </div>
   )
+}
+
+// What an attempt actually draws: the configured count, capped at the pool.
+function questionsPerAttempt(exam, poolSize) {
+  const configured = exam.questionCount || DEFAULT_QUESTION_COUNT
+  return poolSize == null ? configured : Math.min(configured, poolSize)
 }
 
 function formatDate(ts) {

@@ -16,6 +16,11 @@ It runs entirely on free tiers by design: **React 19 + Vite** frontend on
 Functions — every feature here has to work as a static site talking
 directly to Firestore, governed by `firestore.rules`. Keep it that way
 unless the person explicitly asks to add a paid tier (Blaze).
+**Exception:** the project is now on Blaze solely for result emails. One
+Cloud Function (`functions/`) plus the "Trigger Email from Firestore"
+extension, because the browser-side mail API (EmailJS) was blocked by
+company web filters. Don't grow this into a general backend without
+asking. Everything else stays browser → Firestore.
 
 ## Commands
 
@@ -42,6 +47,11 @@ secrets (no committed `.env`):
   changes**. Auth is the `FIREBASE_SERVICE_ACCOUNT` + `FIREBASE_PROJECT_ID`
   secrets; the service account needs the `roles/firebase.admin` IAM role.
   Also runnable by hand from the Actions tab (`workflow_dispatch`).
+- `.github/workflows/deploy-functions.yml` — `firebase deploy --only
+  functions` when `functions/**`, `firebase.json` or that workflow
+  changes. It writes `functions/.env` from the `RESULT_EMAIL_TO` secret
+  and the `FUNCTIONS_REGION` / `MAIL_TIMEZONE` repo variables, since the
+  repo is public and must not commit them.
 
 There is no test suite.
 
@@ -155,11 +165,8 @@ Changing the rule for who may take a restricted exam means editing both.
   and manual finish are three ways into one submit function. If you touch
   `handleSubmit`, check all three call sites still make sense. Unanswered
   questions resolve to `selectedIndex = -1` and count as incorrect.
-- After a successful submit (and in the lost-confirmation recovery path),
-  `sendResultEmail()` from `src/lib/notify.js` fires a result email via
-  EmailJS's REST API, not awaited and never throwing. It's a no-op when
-  the `VITE_EMAILJS_*` env vars are unset. Client-side and best-effort
-  by design (no server); Firestore stays the source of truth.
+- The browser sends no email. The `emailResultOnCreate` Cloud Function
+  reacts to the new result document (see "Result emails").
 - `ExamGuardContext` intercepts in-app navigation (nav bar, sign out) with
   a custom modal (`LeaveExamModal`), but **cannot** intercept the browser
   back button, and can only show a generic (non-custom) message on
@@ -189,6 +196,22 @@ map keyed by `examId` (`timeLimitDrafts`, `domainDrafts`,
 while a draft entry exists, and a dedicated `updateExamX()` function in
 `src/lib/exams.js`. Follow this pattern rather than inventing a new one —
 it's used three times already.
+
+### Result emails (`functions/`)
+`emailResultOnCreate` (`functions/index.js`, Node 22, 2nd gen, ESM) fires
+on `results/{resultId}` create. It renders the email with
+`buildResultEmail()` (`functions/email.js`) and creates `mail/{event.id}`
+with `{ to, replyTo, message: { subject, text, html } }`. The Trigger
+Email extension sends it. Details:
+- `create()` with the event ID as doc ID keeps a repeated event delivery
+  from queueing a second email. A retake (same result ID, new event)
+  does get its own.
+- `mail` is locked in `firestore.rules` (`allow read, write: if false`).
+  Only the Admin SDK writes there.
+- `functions/email.js` duplicates `PASS_THRESHOLD` (keep it in sync with
+  `src/lib/results.js`) and HTML-escapes exam names and emails.
+- `functions` has its own `package.json`/lockfile. The Vite app never
+  imports from it.
 
 ### Charts
 `src/components/ExamBarChart.jsx` is a shared component used by both

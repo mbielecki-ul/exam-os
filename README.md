@@ -145,7 +145,8 @@ below, the feature stays off and nothing else changes.
     exam's **Overview** page. Results of archived exams (see below) are
     hidden here by default; tick **Show archived exams** to include them.
   - **Manage exams & questions**: each exam is shown as a collapsed row
-    (name, question count, active/inactive, time limit, plus **View
+    (name, questions in the pool, active/inactive, time limit with the
+    questions drawn per attempt in brackets, plus **View
     overview** / **Manage questions**). Click the name to expand its
     settings, activate/archive/delete buttons and upload field, or use
     **Expand all** / **Collapse all**. A newly created exam opens

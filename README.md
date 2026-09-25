@@ -90,14 +90,15 @@ at `https://mbielecki-ul.github.io/exam-os/`.
 
 ### 6. (Optional) Result emails
 
-Every finished exam (manual finish, timeout, or leaving mid-exam) sends an
-email with the participant's address and their result (Passed in green,
-Failed in red). It's sent server-side, not from the participant's browser,
+Every finished exam (manual finish, timeout, or leaving mid-exam) sends two
+emails: a notification with the participant's address and their result to
+the admin address(es) in `RESULT_EMAIL_TO`, and a copy of the result to
+the participant themselves (Passed in green, Failed in red). It's sent server-side, not from the participant's browser,
 so company web filters can't block it and participants can't fake it:
 
 1. The browser saves the result to Firestore as usual.
 2. The Cloud Function `emailResultOnCreate` (`functions/index.js`) fires
-   on every new result and writes the email into the `mail` collection.
+   on every new result and writes both emails into the `mail` collection.
 3. Firebase's **Trigger Email from Firestore** extension sends it over
    SMTP and records the delivery status on that `mail` document.
 

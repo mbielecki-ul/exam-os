@@ -200,9 +200,16 @@ it's used three times already.
 ### Result emails (`functions/`)
 `emailResultOnCreate` (`functions/index.js`, Node 22, 2nd gen, ESM) fires
 on `results/{resultId}` create. It renders the email with
-`buildResultEmail()` (`functions/email.js`) and creates `mail/{event.id}`
-with `{ to, replyTo, message: { subject, text, html } }`. The Trigger
-Email extension sends it. Details:
+`buildResultEmail()` (`functions/email.js`). It creates two mail
+documents, and the Trigger Email extension sends them:
+- `mail/{event.id}`: the admin notification to `RESULT_EMAIL_TO`, with
+  `replyTo` set to the participant.
+- `mail/{event.id}-participant`: the participant's own copy
+  (`audience: 'participant'`, no admin link). It's safe to send to
+  `userEmail` because the rules only accept a result whose `userEmail`
+  is the signer's own verified address.
+
+Details:
 - `create()` with the event ID as doc ID keeps a repeated event delivery
   from queueing a second email. A retake (same result ID, new event)
   does get its own.

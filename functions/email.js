@@ -6,8 +6,10 @@ const APP_URL = 'https://mbielecki-ul.github.io/exam-os/admin'
 
 // Builds { subject, text, html } for one result document.
 // `result.submittedAtMs` is the submission time in ms (the Firestore
-// Timestamp converted by the caller).
-export function buildResultEmail(result, { timeZone = 'UTC' } = {}) {
+// Timestamp converted by the caller). `audience` is 'admin' (notification
+// with a link to the admin pages) or 'participant' (their own copy).
+export function buildResultEmail(result, { timeZone = 'UTC', audience = 'admin' } = {}) {
+  const forParticipant = audience === 'participant'
   const total = result.totalQuestions || 0
   const correct = result.correctCount || 0
   const ratio = total > 0 ? correct / total : 0
@@ -39,9 +41,18 @@ export function buildResultEmail(result, { timeZone = 'UTC' } = {}) {
   ]
   const border = (i) => (i < rows.length - 1 ? 'border-bottom:1px solid #e5e7eb;' : '')
 
+  const heading = forParticipant ? 'Your exam result' : 'Exam finished'
+  const intro = forParticipant
+    ? `Thank you for taking “${e(result.examName)}”. Here is your result.`
+    : 'A participant has completed an exam in exam-os.'
+  const footer = forParticipant
+    ? `Pass threshold: ${Math.round(PASS_THRESHOLD * 100)}% correct. This is an automatic message; please don't reply.`
+    : `Pass threshold: ${Math.round(PASS_THRESHOLD * 100)}% correct. Full answer details are on the admin Results page:
+    <a href="${APP_URL}" style="color:#2563eb;">open exam-os</a>`
+
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1f2937;max-width:560px;margin:0 auto;">
-  <h2 style="margin:0 0 4px;font-size:20px;">Exam finished</h2>
-  <p style="margin:0 0 16px;color:#6b7280;">A participant has completed an exam in exam-os.</p>
+  <h2 style="margin:0 0 4px;font-size:20px;">${heading}</h2>
+  <p style="margin:0 0 16px;color:#6b7280;">${intro}</p>
   <div style="margin:0 0 20px;padding:14px 16px;border-radius:6px;background:${bg};color:${color};">
     <span style="font-size:18px;font-weight:bold;">${resultLabel}</span>
     <span style="font-size:14px;">&nbsp;·&nbsp;${correct} of ${total} correct (${percent}%)</span>
@@ -57,13 +68,12 @@ ${rows
   .join('\n')}
   </table>
   <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;">
-    Pass threshold: ${Math.round(PASS_THRESHOLD * 100)}% correct. Full answer details are on the admin Results page:
-    <a href="${APP_URL}" style="color:#2563eb;">open exam-os</a>
+    ${footer}
   </p>
 </div>`
 
   const text = [
-    `Exam finished: ${resultLabel}`,
+    `${heading}: ${resultLabel}`,
     '',
     `Participant: ${result.userEmail}`,
     `Exam: ${result.examName}`,
@@ -72,11 +82,13 @@ ${rows
     `Submission: ${submission}`,
     `Submitted at: ${submittedAt}`,
     '',
-    `Details: ${APP_URL}`,
+    forParticipant ? 'This is an automatic message; please do not reply.' : `Details: ${APP_URL}`,
   ].join('\n')
 
   return {
-    subject: `Exam result: ${result.examName} – ${result.userEmail} – ${resultLabel} (${percent}%)`,
+    subject: forParticipant
+      ? `Your exam result: ${result.examName} – ${resultLabel} (${percent}%)`
+      : `Exam result: ${result.examName} – ${result.userEmail} – ${resultLabel} (${percent}%)`,
     text,
     html,
   }

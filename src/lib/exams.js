@@ -15,6 +15,10 @@ import { db } from './firebase'
 const EXAMS = 'exams'
 const QUESTIONS = 'questions'
 
+// Number of questions drawn for an attempt when an exam doesn't have its
+// own questionCount set yet (exams created before this field existed).
+export const DEFAULT_QUESTION_COUNT = 50
+
 export async function listActiveExams() {
   const snap = await getDocs(query(collection(db, EXAMS), where('active', '==', true)))
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
@@ -25,12 +29,13 @@ export async function listAllExams() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
-export async function createExam({ name, description, timeLimitMinutes, allowedDomains }) {
+export async function createExam({ name, description, timeLimitMinutes, allowedDomains, questionCount }) {
   const ref = await addDoc(collection(db, EXAMS), {
     name,
     description: description || '',
     timeLimitMinutes: Number(timeLimitMinutes),
     allowedDomains: allowedDomains || [], // empty = open to everyone
+    questionCount: Number(questionCount) || DEFAULT_QUESTION_COUNT,
     active: true,
     createdAt: serverTimestamp(),
   })
@@ -43,6 +48,10 @@ export async function updateExamTimeLimit(examId, timeLimitMinutes) {
 
 export async function updateExamDomains(examId, allowedDomains) {
   await updateDoc(doc(db, EXAMS, examId), { allowedDomains })
+}
+
+export async function updateExamQuestionCount(examId, questionCount) {
+  await updateDoc(doc(db, EXAMS, examId), { questionCount: Number(questionCount) })
 }
 
 export async function setExamActive(examId, active) {

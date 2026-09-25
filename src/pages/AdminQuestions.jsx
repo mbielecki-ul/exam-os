@@ -6,9 +6,11 @@ import {
   setExamActive,
   updateExamTimeLimit,
   updateExamDomains,
+  updateExamQuestionCount,
   deleteExam,
   countQuestions,
   addQuestions,
+  DEFAULT_QUESTION_COUNT,
 } from '../lib/exams'
 import { parseQuestionFile } from '../lib/parseQuestions'
 import { parseDomainList } from '../lib/emailDomain'
@@ -20,8 +22,10 @@ export default function AdminQuestions() {
   const [newDesc, setNewDesc] = useState('')
   const [newTimeLimit, setNewTimeLimit] = useState('60')
   const [newDomains, setNewDomains] = useState('')
+  const [newQuestionCount, setNewQuestionCount] = useState(String(DEFAULT_QUESTION_COUNT))
   const [timeLimitDrafts, setTimeLimitDrafts] = useState({}) // examId -> string being edited
   const [domainDrafts, setDomainDrafts] = useState({}) // examId -> string being edited
+  const [questionCountDrafts, setQuestionCountDrafts] = useState({}) // examId -> string being edited
   const [uploadTarget, setUploadTarget] = useState({}) // examId -> {status, message}
   const [error, setError] = useState('')
 
@@ -44,11 +48,13 @@ export default function AdminQuestions() {
       description: newDesc.trim(),
       timeLimitMinutes: newTimeLimit,
       allowedDomains: parseDomainList(newDomains),
+      questionCount: newQuestionCount,
     })
     setNewName('')
     setNewDesc('')
     setNewTimeLimit('60')
     setNewDomains('')
+    setNewQuestionCount(String(DEFAULT_QUESTION_COUNT))
     await refresh()
   }
 
@@ -57,6 +63,18 @@ export default function AdminQuestions() {
     if (!value || Number(value) <= 0) return
     await updateExamTimeLimit(examId, value)
     setTimeLimitDrafts((prev) => {
+      const next = { ...prev }
+      delete next[examId]
+      return next
+    })
+    await refresh()
+  }
+
+  async function handleSaveQuestionCount(examId) {
+    const value = questionCountDrafts[examId]
+    if (!value || Number(value) <= 0) return
+    await updateExamQuestionCount(examId, value)
+    setQuestionCountDrafts((prev) => {
       const next = { ...prev }
       delete next[examId]
       return next
@@ -140,6 +158,15 @@ export default function AdminQuestions() {
             style={{ maxWidth: '11rem' }}
           />
           <input
+            type="number"
+            min="1"
+            placeholder="Questions per attempt"
+            value={newQuestionCount}
+            onChange={(e) => setNewQuestionCount(e.target.value)}
+            required
+            style={{ maxWidth: '11rem' }}
+          />
+          <input
             placeholder="Allowed domains (optional, e.g. ul.com)"
             value={newDomains}
             onChange={(e) => setNewDomains(e.target.value)}
@@ -148,7 +175,8 @@ export default function AdminQuestions() {
         </form>
         <p className="muted" style={{ marginTop: '0.5rem' }}>
           Allowed domains: comma-separated (e.g. <code>ul.com, partner.com</code>).
-          Leave empty for an exam open to every employee.
+          Leave empty for an exam open to every employee. Questions per attempt is
+          capped at however many questions are actually in the pool.
         </p>
       </div>
 
@@ -183,6 +211,26 @@ export default function AdminQuestions() {
                   {!exam.timeLimitMinutes && timeLimitDrafts[exam.id] === undefined && (
                     <span className="error-text">No time limit set yet — exam will run unlimited.</span>
                   )}
+                </div>
+                <div className="time-limit-row">
+                  <label className="muted">
+                    Questions per attempt:{' '}
+                    <input
+                      type="number"
+                      min="1"
+                      className="time-limit-input"
+                      value={questionCountDrafts[exam.id] ?? exam.questionCount ?? DEFAULT_QUESTION_COUNT}
+                      onChange={(e) =>
+                        setQuestionCountDrafts((prev) => ({ ...prev, [exam.id]: e.target.value }))
+                      }
+                    />
+                  </label>
+                  {questionCountDrafts[exam.id] !== undefined && (
+                    <button onClick={() => handleSaveQuestionCount(exam.id)}>Save</button>
+                  )}
+                  <span className="muted">
+                    (capped at {counts[exam.id] ?? '…'} available in the pool)
+                  </span>
                 </div>
                 <div className="time-limit-row">
                   <label className="muted">

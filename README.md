@@ -88,6 +88,42 @@ git push origin main
 The Actions tab will show the deploy running; once green, the app is live
 at `https://mbielecki-ul.github.io/exam-os/`.
 
+### 6. (Optional) Result emails
+
+Every finished exam (manual finish, timeout, or leaving mid-exam) can send
+an email with the participant's address and their result. Since there's
+no server, this goes through [EmailJS](https://www.emailjs.com) straight
+from the browser (free tier: 200 emails/month). Without the three secrets
+below, the feature stays off and nothing else changes.
+
+1. Sign up at emailjs.com → **Email Services → Add New Service** → connect
+   the mailbox that should send the mails (e.g. Gmail or Outlook). Note
+   the **Service ID**.
+2. **Email Templates → Create New Template**. Set **To Email** to the
+   address that should get the notifications (e.g. the admin mailbox; use
+   `{{participant_email}}` instead, or as a CC, if participants should get
+   a copy). Subject/body can use these variables:
+
+   | Variable | Example |
+   | --- | --- |
+   | `{{participant_email}}` | `jane.doe@ul.com` |
+   | `{{exam_name}}` | `Safety Basics` |
+   | `{{correct_count}}` / `{{total_questions}}` | `42` / `50` |
+   | `{{score_percent}}` | `84` |
+   | `{{result}}` | `Passed` or `Failed` (66% threshold) |
+   | `{{result_color}}` / `{{result_bg}}` | text / background colour for the result: green (`#166534` / `#dcfce7`) or red (`#991b1b` / `#fee2e2`) |
+   | `{{duration}}` | `23 min 5 s` |
+   | `{{submission_type}}` | `Submitted manually` / `Auto-submitted (…)` |
+   | `{{submitted_at}}` | `2026-09-25 12:34 UTC` |
+
+   Example subject: `{{exam_name}}: {{participant_email}} {{result}} ({{score_percent}}%)`.
+   Note the **Template ID**.
+3. **Account → General**: note the **Public Key**. Under **Account →
+   Security**, restrict API requests to the app's domain
+   (`mbielecki-ul.github.io`) so the key can't be used from elsewhere.
+4. Add GitHub secrets `VITE_EMAILJS_SERVICE_ID`,
+   `VITE_EMAILJS_TEMPLATE_ID`, `VITE_EMAILJS_PUBLIC_KEY` and redeploy.
+
 ## Using it
 
 - **Employees**: open the URL, enter their email, click the link Firebase
@@ -123,9 +159,11 @@ at `https://mbielecki-ul.github.io/exam-os/`.
     as you like — questions accumulate in the pool, so re-uploading a file
     adds to the existing questions rather than replacing them; delete
     individual questions from **Manage questions** if you need to remove
-    old ones. Each exam attempt draws
-    50 random questions from whatever's currently in that exam's pool (or
-    fewer, if the pool has less than 50).
+    old ones. Each exam attempt draws a configurable number of random
+    questions (default 50, editable per exam — including exams created
+    before this setting existed, which fall back to 50 until changed) from
+    whatever's currently in that exam's pool, capped at the pool size if
+    it has fewer questions than that.
   - **View overview** (per exam, from the exams list): attendee count,
     total correct/wrong answers across everyone, how many passed vs.
     failed (pass threshold is 66% correct, see `PASS_THRESHOLD` in
@@ -162,6 +200,15 @@ npm run dev
   needs extra history-manipulation plumbing that felt like overkill for an
   internal tool. Test each of these paths once when adding a new exam if
   this matters to you operationally.
+- **Result emails are sent from the participant's browser**, best effort.
+  The saved result in Firestore is the source of truth: if the email
+  fails (EmailJS quota, network, or someone blocking the request in
+  devtools), the result still shows up on the admin Results page. The
+  public key is visible in the page source; with a fixed **To Email** in
+  the template it can only ever mail that one address. If you put
+  `{{participant_email}}` in To/CC, someone could abuse it to send the
+  template to arbitrary addresses (up to your EmailJS quota), so the
+  domain restriction in step 6.3 matters more in that setup.
 - **Magic link expiry** is fixed by Firebase (~1 hour), not exactly
   configurable to a specific number of hours.
 - **Grading happens in the browser**, so a technically curious employee

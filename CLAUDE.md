@@ -82,7 +82,10 @@ before. Whenever you touch either, diff them against each other.
 ### Data model (Firestore collections)
 - `exams/{examId}` — `name`, `description`, `active`, `timeLimitMinutes`,
   `allowedDomains` (array of lowercase domains; empty/missing = open to
-  everyone), `createdAt`.
+  everyone), `questionCount` (how many random questions an attempt draws;
+  missing on exams created before this field existed — treat as
+  `DEFAULT_QUESTION_COUNT` from `src/lib/exams.js`, currently 50),
+  `createdAt`.
 - `questions/{questionId}` — `examId`, `text`, `options` (array of exactly
   4), `correctIndex` (0-3), `category` (defaults to `"Uncategorized"`),
   `createdAt`.
@@ -130,8 +133,10 @@ can disagree at the edges — keep that asymmetry in mind.
 Changing the rule for who may take a restricted exam means editing both.
 
 ### Exam-taking flow (`src/pages/ExamTake.jsx`)
-- `QUESTIONS_PER_EXAM = 50`. Draws `min(50, pool size)` random questions
-  via `pickRandomQuestions()` from `src/lib/exams.js`.
+- Draws `min(exam.questionCount || DEFAULT_QUESTION_COUNT, pool size)`
+  random questions via `pickRandomQuestions()` from `src/lib/exams.js`.
+  `questionCount` is admin-editable per exam (see "Adding a new
+  admin-configurable exam property" below).
 - Grading happens **client-side** — the correct answers are visible in
   devtools during an attempt. Acceptable for a low-stakes internal quiz;
   flagged as a known limitation. Don't "fix" this without discussing it
@@ -146,6 +151,11 @@ Changing the rule for who may take a restricted exam means editing both.
   and manual finish are three ways into one submit function. If you touch
   `handleSubmit`, check all three call sites still make sense. Unanswered
   questions resolve to `selectedIndex = -1` and count as incorrect.
+- After a successful submit (and in the lost-confirmation recovery path),
+  `sendResultEmail()` from `src/lib/notify.js` fires a result email via
+  EmailJS's REST API, not awaited and never throwing. It's a no-op when
+  the `VITE_EMAILJS_*` env vars are unset. Client-side and best-effort
+  by design (no server); Firestore stays the source of truth.
 - `ExamGuardContext` intercepts in-app navigation (nav bar, sign out) with
   a custom modal (`LeaveExamModal`), but **cannot** intercept the browser
   back button, and can only show a generic (non-custom) message on
@@ -167,13 +177,14 @@ thrown.
   at 400 per `writeBatch` (Firestore's hard cap is 500).
 
 ### Adding a new admin-configurable exam property
-The pattern used for `timeLimitMinutes` and `allowedDomains` in
-`src/pages/AdminQuestions.jsx` is: a `useState` draft map keyed by
-`examId` (`timeLimitDrafts`, `domainDrafts`), an inline `<input>` bound to
+The pattern used for `timeLimitMinutes`, `allowedDomains`, and
+`questionCount` in `src/pages/AdminQuestions.jsx` is: a `useState` draft
+map keyed by `examId` (`timeLimitDrafts`, `domainDrafts`,
+`questionCountDrafts`), an inline `<input>` bound to
 `draft[examId] ?? exam.currentValue`, a "Save" button that only appears
 while a draft entry exists, and a dedicated `updateExamX()` function in
 `src/lib/exams.js`. Follow this pattern rather than inventing a new one —
-it's used twice already.
+it's used three times already.
 
 ### Charts
 `src/components/ExamBarChart.jsx` is a shared component used by both

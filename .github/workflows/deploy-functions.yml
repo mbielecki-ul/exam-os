@@ -55,6 +55,18 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      # Without a cleanup policy for the function's container images the
+      # non-interactive deploy exits with an error (after deploying). Setting
+      # it is idempotent; it can only fail before the very first deploy
+      # created the image repository, hence continue-on-error.
+      - name: Ensure container image cleanup policy
+        continue-on-error: true
+        run: firebase functions:artifacts:setpolicy --location "${FUNCTIONS_REGION:-us-central1}" --days 1 --force --project "$FIREBASE_PROJECT_ID" --non-interactive
+        env:
+          FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
+
       # No --force: that would also let the CLI delete functions it doesn't
       # recognise. Extension-owned functions are left alone either way.
       - name: Deploy functions

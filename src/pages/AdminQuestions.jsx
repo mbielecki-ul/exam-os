@@ -7,6 +7,10 @@ import {
   updateExamTimeLimit,
   updateExamDomains,
   updateExamQuestionCount,
+  updateExamAvailability,
+  availabilityState,
+  formatDateTime,
+  toMillis,
   archiveExam,
   unarchiveExam,
   deleteExam,
@@ -28,6 +32,7 @@ export default function AdminQuestions() {
   const [timeLimitDrafts, setTimeLimitDrafts] = useState({}) // examId -> string being edited
   const [domainDrafts, setDomainDrafts] = useState({}) // examId -> string being edited
   const [questionCountDrafts, setQuestionCountDrafts] = useState({}) // examId -> string being edited
+  const [availabilityDrafts, setAvailabilityDrafts] = useState({}) // examId -> { from, until, error }
   const [uploadTarget, setUploadTarget] = useState({}) // examId -> {status, message}
   const [showArchived, setShowArchived] = useState(false)
   // Exam cards start collapsed to keep the page short; ids here are expanded.
@@ -91,6 +96,38 @@ export default function AdminQuestions() {
     if (!value || Number(value) <= 0) return
     await updateExamQuestionCount(examId, value)
     setQuestionCountDrafts((prev) => {
+      const next = { ...prev }
+      delete next[examId]
+      return next
+    })
+    await refresh()
+  }
+
+  // Both inputs share one draft, so editing one keeps the other's value.
+  function editAvailability(exam, field, value) {
+    setAvailabilityDrafts((prev) => {
+      const current = prev[exam.id] ?? {
+        from: toLocalInput(exam.availableFrom),
+        until: toLocalInput(exam.availableUntil),
+      }
+      return { ...prev, [exam.id]: { ...current, [field]: value, error: '' } }
+    })
+  }
+
+  async function handleSaveAvailability(examId) {
+    const draft = availabilityDrafts[examId]
+    if (!draft) return
+    const from = draft.from ? new Date(draft.from) : null
+    const until = draft.until ? new Date(draft.until) : null
+    if (from && until && until <= from) {
+      setAvailabilityDrafts((prev) => ({
+        ...prev,
+        [examId]: { ...draft, error: '"Until" must be after "from".' },
+      }))
+      return
+    }
+    await updateExamAvailability(examId, from, until)
+    setAvailabilityDrafts((prev) => {
       const next = { ...prev }
       delete next[examId]
       return next
@@ -237,7 +274,8 @@ export default function AdminQuestions() {
           const hasUnsaved =
             timeLimitDrafts[exam.id] !== undefined ||
             questionCountDrafts[exam.id] !== undefined ||
-            domainDrafts[exam.id] !== undefined
+            domainDrafts[exam.id] !== undefined ||
+            availabilityDrafts[exam.id] !== undefined
           return (
           <div key={exam.id} className="card exam-admin-card">
             <div className="exam-admin-summary">
@@ -253,6 +291,7 @@ export default function AdminQuestions() {
                   {counts[exam.id] ?? '…'} in pool · {exam.active ? 'active' : 'inactive'}
                   {exam.timeLimitMinutes ? ` · ${exam.timeLimitMinutes} min` : ''}
                   {` (${questionsPerAttempt(exam, counts[exam.id])} questions)`}
+                  {availabilitySummary(exam)}
                   {!isOpen && hasUnsaved && <span className="error-text"> · unsaved changes</span>}
                 </span>
               </button>
@@ -307,6 +346,35 @@ export default function AdminQuestions() {
                   <span className="muted">
                     (capped at {counts[exam.id] ?? '…'} available in the pool)
                   </span>
+                </div>
+                <div className="time-limit-row">
+                  <label className="muted">
+                    Available from:{' '}
+                    <input
+                      type="datetime-local"
+                      value={availabilityDrafts[exam.id]?.from ?? toLocalInput(exam.availableFrom)}
+                      onChange={(e) => editAvailability(exam, 'from', e.target.value)}
+                    />
+                  </label>
+                  <label className="muted">
+                    until:{' '}
+                    <input
+                      type="datetime-local"
+                      value={availabilityDrafts[exam.id]?.until ?? toLocalInput(exam.availableUntil)}
+                      onChange={(e) => editAvailability(exam, 'until', e.target.value)}
+                    />
+                  </label>
+                  {availabilityDrafts[exam.id] !== undefined && (
+                    <button onClick={() => handleSaveAvailability(exam.id)}>Save</button>
+                  )}
+                  {availabilityDrafts[exam.id]?.error ? (
+                    <span className="error-text">{availabilityDrafts[exam.id].error}</span>
+                  ) : (
+                    !exam.availableFrom && !exam.availableUntil &&
+                    availabilityDrafts[exam.id] === undefined && (
+                      <span className="muted">No time window (empty = no limit)</span>
+                    )
+                  )}
                 </div>
                 <div className="time-limit-row">
                   <label className="muted">
@@ -429,6 +497,24 @@ export default function AdminQuestions() {
 function questionsPerAttempt(exam, poolSize) {
   const configured = exam.questionCount || DEFAULT_QUESTION_COUNT
   return poolSize == null ? configured : Math.min(configured, poolSize)
+}
+
+// Short note for the collapsed card row, e.g. " · opens 1 Oct 2026, 08:00".
+function availabilitySummary(exam) {
+  const state = availabilityState(exam)
+  if (state === 'upcoming') return ` · opens ${formatDateTime(exam.availableFrom)}`
+  if (state === 'closed') return ` · closed ${formatDateTime(exam.availableUntil)}`
+  if (exam.availableUntil) return ` · until ${formatDateTime(exam.availableUntil)}`
+  return ''
+}
+
+// Firestore Timestamp -> value for <input type="datetime-local"> (local time).
+function toLocalInput(ts) {
+  const ms = toMillis(ts)
+  if (ms == null) return ''
+  const d = new Date(ms)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function formatDate(ts) {

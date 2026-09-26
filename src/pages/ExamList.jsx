@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listActiveExams } from '../lib/exams'
+import { listActiveExams, availabilityState, formatDateTime } from '../lib/exams'
 import { listOwnResults } from '../lib/results'
 import { examAllowsEmail } from '../lib/emailDomain'
 import { useAuth } from '../context/AuthContext'
@@ -35,6 +35,7 @@ export default function ExamList() {
           // Each exam can only be attended once, so there's at most one
           // result per exam here.
           const completedResult = ownResults.find((r) => r.examId === exam.id)
+          const availability = availabilityState(exam)
           const pct = completedResult
             ? Math.round((completedResult.correctCount / completedResult.totalQuestions) * 100)
             : null
@@ -46,6 +47,9 @@ export default function ExamList() {
               {exam.timeLimitMinutes && (
                 <p className="muted">Time limit: {exam.timeLimitMinutes} minutes</p>
               )}
+              {!completedResult && availability === 'open' && exam.availableUntil && (
+                <p className="muted">Available until {formatDateTime(exam.availableUntil)}</p>
+              )}
               {completedResult ? (
                 <>
                   <p className="muted">
@@ -53,6 +57,10 @@ export default function ExamList() {
                   </p>
                   <span className="badge-done">Already completed</span>
                 </>
+              ) : availability === 'upcoming' ? (
+                <p className="muted">Opens {formatDateTime(exam.availableFrom)}</p>
+              ) : availability === 'closed' ? (
+                <p className="muted">Closed since {formatDateTime(exam.availableUntil)}</p>
               ) : (
                 <Link className="button" to={`/exam/${exam.id}`}>Start exam</Link>
               )}

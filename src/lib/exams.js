@@ -9,6 +9,7 @@ import {
   deleteDoc,
   writeBatch,
   serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -52,6 +53,40 @@ export async function updateExamDomains(examId, allowedDomains) {
 
 export async function updateExamQuestionCount(examId, questionCount) {
   await updateDoc(doc(db, EXAMS, examId), { questionCount: Number(questionCount) })
+}
+
+// Optional window in which the exam can be started. `from` / `until` are
+// Dates, or null for no limit on that side.
+export async function updateExamAvailability(examId, from, until) {
+  await updateDoc(doc(db, EXAMS, examId), {
+    availableFrom: from ? Timestamp.fromDate(from) : null,
+    availableUntil: until ? Timestamp.fromDate(until) : null,
+  })
+}
+
+// 'upcoming' (availableFrom still ahead), 'closed' (availableUntil passed)
+// or 'open'. Missing fields mean no limit. startAttempt in functions/ applies
+// the same check server-side; this is only for display.
+export function availabilityState(exam, nowMs = Date.now()) {
+  const from = toMillis(exam.availableFrom)
+  const until = toMillis(exam.availableUntil)
+  if (from != null && nowMs < from) return 'upcoming'
+  if (until != null && nowMs >= until) return 'closed'
+  return 'open'
+}
+
+export function toMillis(ts) {
+  if (ts == null) return null
+  if (typeof ts.toMillis === 'function') return ts.toMillis()
+  const ms = new Date(ts).getTime()
+  return Number.isNaN(ms) ? null : ms
+}
+
+export function formatDateTime(ts) {
+  const ms = toMillis(ts)
+  return ms == null
+    ? ''
+    : new Date(ms).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 export async function setExamActive(examId, active) {

@@ -215,6 +215,35 @@ export default function ExamTake() {
     return () => clearInterval(interval)
   }, [exam, questions, startedAtMs])
 
+  // Discourage copying questions out while an exam is running: no copy/cut,
+  // context menu, dragging text, or the matching shortcuts (plus print/save).
+  // Text selection is disabled in CSS (.exam-no-copy) and printing hides the
+  // exam (@media print). A deterrent only — screenshots, a phone camera or
+  // devtools can't be prevented by a web page.
+  const [copyNotice, setCopyNotice] = useState(false)
+  useEffect(() => {
+    if (!questions) return
+    let noticeTimer
+    function block(e) {
+      e.preventDefault()
+      setCopyNotice(true)
+      clearTimeout(noticeTimer)
+      noticeTimer = setTimeout(() => setCopyNotice(false), 2500)
+    }
+    function onKeyDown(e) {
+      if (!(e.ctrlKey || e.metaKey)) return
+      if (['c', 'x', 'a', 'p', 's'].includes(e.key.toLowerCase())) block(e)
+    }
+    const events = ['copy', 'cut', 'contextmenu', 'dragstart']
+    events.forEach((type) => document.addEventListener(type, block))
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      events.forEach((type) => document.removeEventListener(type, block))
+      document.removeEventListener('keydown', onKeyDown)
+      clearTimeout(noticeTimer)
+    }
+  }, [questions])
+
   if (error) {
     return (
       <div className="page-center">
@@ -228,7 +257,14 @@ export default function ExamTake() {
   if (!exam || !questions) return <div className="page"><p>Loading …</p></div>
 
   return (
-    <div className="page exam-take">
+    <>
+    <p className="print-block-notice">Printing is disabled during the exam.</p>
+    <div className="page exam-take exam-no-copy">
+      {copyNotice && (
+        <div className="copy-notice" role="status">
+          Copying and printing are disabled during the exam.
+        </div>
+      )}
       <div className="exam-take-header">
         <h1>{exam.name}</h1>
         <div className="exam-take-header-right">
@@ -288,6 +324,7 @@ export default function ExamTake() {
         </p>
       )}
     </div>
+    </>
   )
 }
 

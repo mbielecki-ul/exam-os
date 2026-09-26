@@ -24,6 +24,3 @@ export const db = getFirestore(app)
 // the next person on the same machine silently inherit the previous
 // employee's signed-in session.
 setPersistence(auth, browserSessionPersistence)
-
-// Hardcoded admin email — kept in one place, also mirrored in firestore.rules.
-export const ADMIN_EMAILS = ['maximilian.bielecki@ul.com', 'max@bielecki.at', 'thomas.reznicek@ul.com']

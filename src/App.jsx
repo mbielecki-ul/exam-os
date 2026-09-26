@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import AdminQuestions from './pages/AdminQuestions'
 import AdminQuestionEditor from './pages/AdminQuestionEditor'
 import AdminExamStats from './pages/AdminExamStats'
+import AdminAdmins from './pages/AdminAdmins'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/admin/questions" element={<RequireAdmin><AdminQuestions /></RequireAdmin>} />
               <Route path="/admin/questions/:examId" element={<RequireAdmin><AdminQuestionEditor /></RequireAdmin>} />
               <Route path="/admin/exams/:examId" element={<RequireAdmin><AdminExamStats /></RequireAdmin>} />
+              <Route path="/admin/admins" element={<RequireAdmin><AdminAdmins /></RequireAdmin>} />
             </Routes>
           </ExamGuardProvider>
         </AuthProvider>

@@ -721,3 +721,17 @@ input, select {
   gap: 0.75rem;
   margin-top: 1.25rem;
 }
+
+.participants-textarea {
+  width: 100%;
+  min-height: 9rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+}

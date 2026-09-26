@@ -65,6 +65,13 @@ service cloud.firestore {
       allow create: if false;
     }
 
+    // Who is expected to take an exam (emails), plus when each was last
+    // reminded (written by the sendReminders Cloud Function). Admin-only:
+    // employees never see who else is on the list.
+    match /assignments/{examId} {
+      allow read, write: if isAdmin();
+    }
+
     // Admin list. Only admins may read it — the app decides whether to show
     // the admin pages by whether this read succeeds. An admin can't remove
     // themselves, so the list can never end up empty from the app.

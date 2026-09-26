@@ -231,6 +231,11 @@ thrown.
 - `normalize()` requires non-empty text and exactly 4 non-empty options.
 - Writes go through `addQuestions()` in `src/lib/exams.js`, which chunks
   at 400 per `writeBatch` (Firestore's hard cap is 500).
+- Manual add/edit (`AdminQuestionEditor.jsx`) uses `CategoryInput`
+  (`src/components/CategoryInput.jsx`), a custom autocomplete over the
+  exam's existing categories (not `<datalist>`, which can't be themed).
+  `canonicalCategory()` snaps case/space variants to the existing spelling
+  on save; uploads are not normalised.
 
 ### Adding a new admin-configurable exam property
 The pattern used for `timeLimitMinutes`, `allowedDomains`, and

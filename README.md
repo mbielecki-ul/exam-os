@@ -267,7 +267,11 @@ no `mail` document at all for a result, check the function's logs
   - **Manage questions** (per exam, from the exams list): view every
     question one by one, filter by category, edit a question's text,
     options, correct answer, or category in place, add a single question
-    manually, or delete one — no re-upload needed for small fixes. An
+    manually, or delete one — no re-upload needed for small fixes. The
+    category field suggests the exam's existing categories as you type
+    (arrow keys + Enter or a click to pick). A different case or stray
+    spaces ("safety ") are saved as the existing category ("Safety"), and a
+    hint says when a name would create a new category. An
     "Export to Excel" button downloads every question in that exam's pool
     as a single `.xlsx` file, using the same columns as upload
     (`question,option1,option2,option3,option4,correctOption,category`),

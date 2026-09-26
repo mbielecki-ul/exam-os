@@ -129,8 +129,28 @@ export async function deleteQuestion(questionId) {
   await deleteDoc(doc(db, QUESTIONS, questionId))
 }
 
-// Picks up to `count` random questions from the exam's pool.
+// Unbiased (Fisher–Yates) shuffle; returns a new array.
+function shuffle(items) {
+  const a = [...items]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+// Picks up to `count` random questions from the exam's pool, each with its
+// own random `optionOrder`: display position -> original option index.
+// `options` and `correctIndex` stay in original order, so answers are
+// recorded (and graded, and shown to admins) against the original indices.
 export function pickRandomQuestions(pool, count = 50) {
-  const shuffled = [...pool].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, Math.min(count, shuffled.length))
+  return shuffle(pool)
+    .slice(0, Math.min(count, pool.length))
+    .map((q) => ({ ...q, optionOrder: shuffle(q.options.map((_, i) => i)) }))
+}
+
+// Display order for a drawn question. Attempts saved before options were
+// shuffled have no optionOrder and keep the original order.
+export function optionOrderOf(question) {
+  return question.optionOrder ?? question.options.map((_, i) => i)
 }

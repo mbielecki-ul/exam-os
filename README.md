@@ -185,7 +185,10 @@ no `mail` document at all for a result, check the function's logs
     questions (default 50, editable per exam — including exams created
     before this setting existed, which fall back to 50 until changed) from
     whatever's currently in that exam's pool, capped at the pool size if
-    it has fewer questions than that.
+    it has fewer questions than that. Both the questions and the order of
+    each question's four answer options are shuffled per attempt (a resumed
+    attempt keeps its order); results are always recorded against the
+    original option numbers, so stats and answer breakdowns are unaffected.
   - **Archive** (per exam, from the exams list): for exams that are
     finished but whose history you want to keep. Archiving deactivates the
     exam, hides it from employees, and moves it into a collapsed

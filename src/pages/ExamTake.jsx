@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { listAllExams, listQuestions, pickRandomQuestions, DEFAULT_QUESTION_COUNT } from '../lib/exams'
+import {
+  listAllExams,
+  listQuestions,
+  pickRandomQuestions,
+  optionOrderOf,
+  DEFAULT_QUESTION_COUNT,
+} from '../lib/exams'
 import { submitResult, getOwnResultForExam } from '../lib/results'
 import { examAllowsEmail } from '../lib/emailDomain'
 import { loadExamProgress, saveExamProgress, clearExamProgress } from '../lib/examProgress'
@@ -101,6 +107,7 @@ export default function ExamTake() {
   const question = questions ? questions[current] : null
   const answeredCount = Object.keys(answers).length
 
+  // `idx` is the option's original index (not its shuffled display position).
   function selectOption(idx) {
     setAnswers((a) => ({ ...a, [question.id]: idx }))
   }
@@ -287,15 +294,15 @@ export default function ExamTake() {
       <div className="card question-card">
         <p className="question-text">{question.text}</p>
         <div className="option-list">
-          {question.options.map((opt, idx) => (
+          {optionOrderOf(question).map((originalIdx) => (
             <button
-              key={idx}
+              key={originalIdx}
               className={
-                'option-btn' + (answers[question.id] === idx ? ' option-selected' : '')
+                'option-btn' + (answers[question.id] === originalIdx ? ' option-selected' : '')
               }
-              onClick={() => selectOption(idx)}
+              onClick={() => selectOption(originalIdx)}
             >
-              {opt}
+              {question.options[originalIdx]}
             </button>
           ))}
         </div>

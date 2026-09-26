@@ -151,6 +151,14 @@ Changing the rule for who may take a restricted exam means editing both.
   random questions via `pickRandomQuestions()` from `src/lib/exams.js`.
   `questionCount` is admin-editable per exam (see "Adding a new
   admin-configurable exam property" below).
+- Options are shuffled per attempt, for display only.
+  `pickRandomQuestions()` (Fisher–Yates) gives each drawn question an
+  `optionOrder` (display position → original index). `options` and
+  `correctIndex` are never reordered: `answers[q.id]` and the saved
+  `selectedIndex` are original indices, so grading, `AdminExamStats`
+  breakdowns and emails need no mapping. Render through `optionOrderOf()`,
+  which falls back to identity for in-progress attempts saved before this
+  existed.
 - Grading happens **client-side** — the correct answers are visible in
   devtools during an attempt. Acceptable for a low-stakes internal quiz;
   flagged as a known limitation. Don't "fix" this without discussing it

@@ -1,10 +1,11 @@
-// Persists an in-progress exam attempt (the drawn question set, answers so
-// far, current position, and the original start time) to localStorage, so a
-// dropped connection, closed tab, or OS-killed background tab doesn't force
-// a shift worker to restart with a freshly (and differently) drawn question
-// set and a reset timer. Keyed per (exam, person) so it can't leak across
-// employees on a shared device, and cleared as soon as the attempt is
-// actually submitted.
+// Keeps the in-progress attempt's answers and current position in
+// localStorage, so a reload, dropped connection or OS-killed background tab
+// picks up exactly where the person was. The questions themselves (and the
+// start time / deadline) come back from the server on resume; answers are
+// also saved to the server attempt, this is just the fastest copy. Keyed
+// per (exam, person) and tied to the attempt's start time, so it can't leak
+// across employees on a shared device or into a later attempt, and cleared
+// once the attempt is submitted.
 //
 // Best-effort only: storage failures (private browsing, quota, disabled
 // storage) are swallowed — losing autosave should never block taking the
@@ -16,25 +17,24 @@ function storageKey(examId, uid) {
   return `${KEY_PREFIX}${examId}_${uid}`
 }
 
-export function loadExamProgress(examId, uid) {
+// Returns { answers, current } saved for the attempt started at startedAtMs.
+export function loadExamProgress(examId, uid, startedAtMs) {
   try {
     const raw = window.localStorage.getItem(storageKey(examId, uid))
     if (!raw) return null
     const data = JSON.parse(raw)
-    if (!data || !Array.isArray(data.questions) || !data.questions.length || !data.startedAtMs) {
-      return null
-    }
+    if (!data || data.startedAtMs !== startedAtMs || typeof data.answers !== 'object') return null
     return data
   } catch {
     return null
   }
 }
 
-export function saveExamProgress(examId, uid, { questions, answers, current, startedAtMs }) {
+export function saveExamProgress(examId, uid, { answers, current, startedAtMs }) {
   try {
     window.localStorage.setItem(
       storageKey(examId, uid),
-      JSON.stringify({ questions, answers, current, startedAtMs })
+      JSON.stringify({ answers, current, startedAtMs })
     )
   } catch {
     // ignore — see module note above

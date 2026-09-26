@@ -1,21 +1,40 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth'
-import { auth, ADMIN_EMAILS } from '../lib/firebase'
+import { auth } from '../lib/firebase'
+import { getAdminEmails } from '../lib/admins'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined) // undefined = loading, null = logged out
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u))
+    // The user is only published once the admin check is done, so guards
+    // never see a signed-in admin as a non-admin for a moment. `latest`
+    // drops a slow check that a newer sign-in/out has overtaken.
+    let latest = 0
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      const run = ++latest
+      let admin = false
+      if (u) {
+        try {
+          admin = (await getAdminEmails()) !== null
+        } catch {
+          admin = false
+        }
+      }
+      if (run !== latest) return
+      setIsAdmin(admin)
+      setUser(u)
+    })
     return unsub
   }, [])
 
   const value = {
     user,
     loading: user === undefined,
-    isAdmin: !!user && ADMIN_EMAILS.includes(user.email),
+    isAdmin: !!user && isAdmin,
     signOut: () => fbSignOut(auth),
   }
 

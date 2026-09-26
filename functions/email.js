@@ -2,7 +2,8 @@
 // module pulls in the browser Firebase SDK).
 export const PASS_THRESHOLD = 0.66
 
-const APP_URL = 'https://mbielecki-ul.github.io/exam-os/admin'
+const APP_ROOT = 'https://mbielecki-ul.github.io/exam-os/'
+const APP_URL = `${APP_ROOT}admin`
 
 // Builds { subject, text, html } for one result document.
 // `result.submittedAtMs` is the submission time in ms (the Firestore
@@ -92,6 +93,51 @@ ${rows
     text,
     html,
   }
+}
+
+// Reminder for an assigned participant who hasn't completed the exam yet.
+// `exam` is the exam document; availableUntil is a Firestore Timestamp.
+export function buildReminderEmail(exam, { timeZone = 'UTC' } = {}) {
+  const e = escapeHtml
+  const name = exam.name || 'an exam'
+  const until = exam.availableUntil
+    ? exam.availableUntil
+        .toDate()
+        .toLocaleString('en-GB', { timeZone, dateStyle: 'full', timeStyle: 'short' })
+    : null
+  const details = [
+    until && `Please complete it by <strong>${e(until)}</strong>.`,
+    exam.timeLimitMinutes &&
+      `Once started, you have ${e(exam.timeLimitMinutes)} minutes, and each exam can only be taken once.`,
+  ].filter(Boolean)
+
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1f2937;max-width:560px;margin:0 auto;">
+  <h2 style="margin:0 0 4px;font-size:20px;">Reminder: ${e(name)}</h2>
+  <p style="margin:0 0 16px;color:#6b7280;">You have been asked to take the exam “${e(name)}”, and it isn't completed yet.</p>
+${details.map((d) => `  <p style="margin:0 0 12px;">${d}</p>`).join('\n')}
+  <p style="margin:20px 0;">
+    <a href="${APP_ROOT}" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:bold;">Open exam-os</a>
+  </p>
+  <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;">
+    Sign in with this email address. If you have already finished the exam, please ignore this message. This is an automatic message; please don't reply.
+  </p>
+</div>`
+
+  const text = [
+    `Reminder: ${name}`,
+    '',
+    `You have been asked to take the exam "${name}", and it isn't completed yet.`,
+    until && `Please complete it by ${until}.`,
+    exam.timeLimitMinutes &&
+      `Once started, you have ${exam.timeLimitMinutes} minutes, and each exam can only be taken once.`,
+    '',
+    `Open exam-os: ${APP_ROOT}`,
+    'Sign in with this email address. If you have already finished the exam, please ignore this message.',
+  ]
+    .filter((line) => line !== false && line != null)
+    .join('\n')
+
+  return { subject: `Reminder: please complete “${name}”`, text, html }
 }
 
 function formatDuration(totalSeconds) {

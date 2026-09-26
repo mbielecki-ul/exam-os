@@ -137,7 +137,10 @@ export default function AdminDashboard() {
     <div className="page">
       <div className="admin-header">
         <h1>Results</h1>
-        <Link className="button" to="/admin/questions">Manage exams &amp; questions</Link>
+        <div className="exam-admin-actions">
+          <Link className="button" to="/admin/questions">Manage exams &amp; questions</Link>
+          <Link className="button" to="/admin/admins">Admins</Link>
+        </div>
       </div>
 
       <div className="filter-row">

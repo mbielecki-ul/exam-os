@@ -1,19 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import {
-  listAllExams,
-  listQuestions,
-  pickRandomQuestions,
-  optionOrderOf,
-  DEFAULT_QUESTION_COUNT,
-} from '../lib/exams'
-import { submitResult, getOwnResultForExam } from '../lib/results'
-import { examAllowsEmail } from '../lib/emailDomain'
+import { startAttempt, submitAttempt, saveAttemptAnswers } from '../lib/attempts'
 import { loadExamProgress, saveExamProgress, clearExamProgress } from '../lib/examProgress'
 import { useAuth } from '../context/AuthContext'
 import { useExamGuard } from '../context/ExamGuardContext'
 
 const LOW_TIME_WARNING_SECONDS = 60
+// Answers are saved to the server attempt this long after the last change.
+const ANSWER_SAVE_DELAY_MS = 800
 
 export default function ExamTake() {
   const { examId } = useParams()
@@ -24,13 +18,19 @@ export default function ExamTake() {
   const [exam, setExam] = useState(null)
   const [questions, setQuestions] = useState(null)
   const [current, setCurrent] = useState(0)
-  const [answers, setAnswers] = useState({}) // questionId -> selectedIndex
-  // Set once the attempt actually starts (fresh, or resumed from a saved
-  // in-progress attempt) — see the load() effect below.
+  const [answers, setAnswers] = useState({}) // questionId -> selectedIndex (original option index)
+  // Server-side start time and deadline of the attempt (see startAttempt in
+  // functions/attempts.js). The deadline is null for an exam without a
+  // time limit.
   const [startedAtMs, setStartedAtMs] = useState(null)
+  const [deadlineMs, setDeadlineMs] = useState(null)
+  // Server clock minus this browser's clock, so a wrong PC clock can't
+  // shorten or stretch the countdown.
+  const clockOffsetRef = useRef(0)
   const [remainingSeconds, setRemainingSeconds] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState('') // can't take the exam: replaces the page
+  const [submitError, setSubmitError] = useState('') // submit failed: shown next to the button
 
   // Guards so the timer running out and a manual click can never both submit.
   const hasSubmittedRef = useRef(false)
@@ -38,71 +38,75 @@ export default function ExamTake() {
   // interval (set up once) still sees up-to-date answers/questions.
   const handleSubmitRef = useRef(() => {})
 
+  function finish(result) {
+    clearExamProgress(examId, user.uid)
+    // Clear the guard right away — the result is already in, so the
+    // navigate() below to the "done" screen shouldn't also trigger the
+    // leave-exam warning.
+    unregisterExam()
+    navigate(`/exam/${examId}/done`, {
+      state: {
+        correctCount: result.correctCount,
+        total: result.totalQuestions,
+        autoSubmitted: result.autoSubmitted,
+      },
+    })
+  }
+
   useEffect(() => {
+    let cancelled = false
     async function load() {
       try {
-        const exams = await listAllExams()
-        const found = exams.find((e) => e.id === examId)
-        if (!found) throw new Error('Exam not found.')
-        if (found.archived) throw new Error('This exam has been archived and can no longer be taken.')
-
-        // Domain-restricted exams: the list page already hides these from
-        // people outside the allowed domains, but a direct link would
-        // otherwise bypass that.
-        if (!examAllowsEmail(found, user.email)) {
-          throw new Error('This exam is not available for your email address.')
-        }
-
-        // Each exam can only be attended once per person. This also guards
-        // against navigating straight to the URL after already completing
-        // it — the "Start exam" button on the list page already hides in
-        // that case, but a direct link would otherwise bypass that.
-        const existing = await getOwnResultForExam(examId, user.uid)
-        if (existing) {
-          clearExamProgress(examId, user.uid)
-          throw new Error('You have already completed this exam. Each exam can only be taken once.')
-        }
-
-        setExam(found)
-
-        // Resume a saved in-progress attempt (same drawn questions, answers,
-        // position, and original start time) rather than drawing a fresh
-        // set and resetting the timer — a dropped connection or a tab killed
-        // in the background shouldn't cost the whole attempt.
-        const saved = loadExamProgress(examId, user.uid)
-        if (saved) {
-          setQuestions(saved.questions)
-          setAnswers(saved.answers || {})
-          setCurrent(saved.current || 0)
-          setStartedAtMs(saved.startedAtMs)
+        // The server checks everything (exam active, not archived, time
+        // window, allowed domain, not already completed) and either starts a
+        // new attempt or returns the one in progress — same questions, same
+        // deadline — so a reload or a dropped connection doesn't cost the
+        // attempt.
+        const res = await startAttempt(examId)
+        if (cancelled) return
+        if (res.status === 'finished') {
+          // Time ran out while the page was closed; the server graded it.
+          finish(res.result)
           return
         }
-
-        const pool = await listQuestions(examId)
-        if (pool.length === 0) throw new Error('No questions have been set up for this exam yet.')
-        const picked = pickRandomQuestions(pool, found.questionCount || DEFAULT_QUESTION_COUNT)
-        const now = Date.now()
-        setQuestions(picked)
-        setStartedAtMs(now)
-        saveExamProgress(examId, user.uid, {
-          questions: picked,
-          answers: {},
-          current: 0,
-          startedAtMs: now,
-        })
+        clockOffsetRef.current = res.serverNowMs - Date.now()
+        const saved = loadExamProgress(examId, user.uid, res.startedAtMs)
+        setExam(res.exam)
+        setQuestions(res.questions)
+        setAnswers({ ...res.answers, ...(saved?.answers || {}) })
+        setCurrent(Math.min(saved?.current || 0, res.questions.length - 1))
+        setStartedAtMs(res.startedAtMs)
+        setDeadlineMs(res.deadlineMs)
       } catch (err) {
+        if (cancelled) return
+        if (err.code === 'already-exists') clearExamProgress(examId, user.uid)
         setError(err.message)
       }
     }
     load()
+    return () => {
+      cancelled = true
+    }
+    // finish() only uses stable values; re-running on its identity would
+    // start the attempt twice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examId, user.uid])
 
-  // Keep the saved attempt in sync as the person answers/navigates, so a
-  // resume picks up exactly where they left off.
+  // Keep the saved progress in sync as the person answers/navigates.
   useEffect(() => {
     if (!questions || !startedAtMs) return
-    saveExamProgress(examId, user.uid, { questions, answers, current, startedAtMs })
+    saveExamProgress(examId, user.uid, { answers, current, startedAtMs })
   }, [examId, user.uid, questions, answers, current, startedAtMs])
+
+  // ...and save answers to the server attempt shortly after each change.
+  // Failures (offline, deadline passed) are fine: the submit sends them too.
+  useEffect(() => {
+    if (!questions || hasSubmittedRef.current || Object.keys(answers).length === 0) return
+    const timer = setTimeout(() => {
+      saveAttemptAnswers(examId, user.uid, answers).catch(() => {})
+    }, ANSWER_SAVE_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [examId, user.uid, questions, answers])
 
   const question = questions ? questions[current] : null
   const answeredCount = Object.keys(answers).length
@@ -116,74 +120,16 @@ export default function ExamTake() {
     if (hasSubmittedRef.current) return
     hasSubmittedRef.current = true
     setSubmitting(true)
-    setError('')
+    setSubmitError('')
     try {
-      let correctCount = 0
-      const answerLog = questions.map((q) => {
-        // Unanswered questions (including ones never reached before time ran
-        // out) resolve to -1, which never matches a real option index — they
-        // count as incorrect, same as a wrong answer.
-        const selectedIndex = answers[q.id] ?? -1
-        const correct = selectedIndex === q.correctIndex
-        if (correct) correctCount += 1
-        return { questionId: q.id, selectedIndex, correct }
-      })
-
-      await submitResult({
-        userEmail: user.email,
-        userUid: user.uid,
-        examId,
-        examName: exam.name,
-        startedAtMs,
-        totalQuestions: questions.length,
-        correctCount,
-        answers: answerLog,
-        autoSubmitted: auto,
-      })
-
-      clearExamProgress(examId, user.uid)
-
-      // Clear the guard right away — the result is already in, so the
-      // navigate() below to the "done" screen shouldn't also trigger the
-      // leave-exam warning.
-      unregisterExam()
-
-      navigate(`/exam/${examId}/done`, {
-        state: { correctCount, total: questions.length, autoSubmitted: auto },
-      })
+      // Graded server-side. Unanswered questions (including ones never
+      // reached before time ran out) count as incorrect. Submitting again
+      // after a lost response just returns the stored result.
+      const result = await submitAttempt(examId, answers, auto)
+      finish(result)
     } catch (err) {
       hasSubmittedRef.current = false
-
-      // A "permission-denied" here almost always means the first attempt's
-      // write actually reached Firestore and only the confirmation was lost
-      // (e.g. a dropped connection right at submit) — a second write to the
-      // same result document is a Firestore "update", which only admins may
-      // do. Rather than show that confusing raw error, check whether the
-      // result is in fact already there and, if so, treat this as success.
-      if (err.code === 'permission-denied') {
-        try {
-          const existing = await getOwnResultForExam(examId, user.uid)
-          if (existing) {
-            clearExamProgress(examId, user.uid)
-            unregisterExam()
-            navigate(`/exam/${examId}/done`, {
-              state: {
-                correctCount: existing.correctCount,
-                total: existing.totalQuestions,
-                autoSubmitted: existing.autoSubmitted,
-              },
-            })
-            return
-          }
-        } catch {
-          // fall through to the generic message below
-        }
-        setError('Could not submit your exam — please check your connection and try again.')
-        setSubmitting(false)
-        return
-      }
-
-      setError(err.message)
+      setSubmitError(err.message)
       setSubmitting(false)
     }
   }
@@ -203,14 +149,13 @@ export default function ExamTake() {
     return () => unregisterExam()
   }, [questions, registerExam, unregisterExam])
 
-  // Countdown timer: starts once the exam (and its time limit) is loaded.
+  // Countdown timer against the server's deadline.
   useEffect(() => {
-    if (!exam || !exam.timeLimitMinutes || !questions || !startedAtMs) return
-
-    const deadlineMs = startedAtMs + exam.timeLimitMinutes * 60 * 1000
+    if (!questions || !deadlineMs) return
 
     function tick() {
-      const remaining = Math.max(0, Math.round((deadlineMs - Date.now()) / 1000))
+      const nowMs = Date.now() + clockOffsetRef.current
+      const remaining = Math.max(0, Math.round((deadlineMs - nowMs) / 1000))
       setRemainingSeconds(remaining)
       if (remaining <= 0) {
         handleSubmitRef.current({ auto: true })
@@ -220,7 +165,7 @@ export default function ExamTake() {
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  }, [exam, questions, startedAtMs])
+  }, [questions, deadlineMs])
 
   // Discourage copying questions out while an exam is running: no copy/cut,
   // context menu, dragging text, or the matching shortcuts (plus print/save).
@@ -261,7 +206,7 @@ export default function ExamTake() {
       </div>
     )
   }
-  if (!exam || !questions) return <div className="page"><p>Loading …</p></div>
+  if (!exam || !questions) return <div className="page"><p>Preparing your exam …</p></div>
 
   return (
     <>
@@ -294,7 +239,7 @@ export default function ExamTake() {
       <div className="card question-card">
         <p className="question-text">{question.text}</p>
         <div className="option-list">
-          {optionOrderOf(question).map((originalIdx) => (
+          {question.optionOrder.map((originalIdx) => (
             <button
               key={originalIdx}
               className={
@@ -324,6 +269,8 @@ export default function ExamTake() {
           </button>
         )}
       </div>
+
+      {submitError && <p className="error-text">{submitError}</p>}
 
       {answeredCount < questions.length && current === questions.length - 1 && (
         <p className="muted">

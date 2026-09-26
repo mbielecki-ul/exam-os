@@ -24,3 +24,11 @@ export function parseDomainList(input) {
     ),
   ]
 }
+
+// Pulls every email address out of free text (one per line, comma- or
+// semicolon-separated, pasted from Outlook as "Name <a@b.com>", or a CSV
+// export) into a clean, deduped, lowercase list.
+export function parseEmailList(input) {
+  const found = (input || '').match(/[^\s@<>,;:"'()[\]]+@[^\s@<>,;:"'()[\]]+\.[^\s@<>,;:"'()[\]]+/g) || []
+  return [...new Set(found.map((e) => e.toLowerCase()))]
+}

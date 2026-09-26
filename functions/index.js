@@ -1,9 +1,12 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
+import { onCall } from 'firebase-functions/v2/https'
 import { defineString } from 'firebase-functions/params'
 import { logger } from 'firebase-functions'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { buildResultEmail } from './email.js'
+import { startAttempt as startAttemptHandler, submitAttempt as submitAttemptHandler } from './attempts.js'
+import { sendReminders as sendRemindersHandler } from './reminders.js'
 
 // Values come from functions/.env, which the deploy workflow writes from
 // GitHub secrets/variables (see .github/workflows/deploy-functions.yml).
@@ -14,6 +17,16 @@ const MAIL_TIMEZONE = defineString('MAIL_TIMEZONE', { default: 'UTC' })
 const FUNCTIONS_REGION = defineString('FUNCTIONS_REGION', { default: 'us-central1' })
 
 initializeApp()
+
+// Server-side exam attempts (see attempts.js): the browser gets questions
+// without correct answers and its score only after submitting.
+const callableOptions = { region: FUNCTIONS_REGION, maxInstances: 10 }
+export const startAttempt = onCall(callableOptions, startAttemptHandler)
+export const submitAttempt = onCall(callableOptions, submitAttemptHandler)
+// Admin-only: reminder emails to assigned participants who haven't finished.
+export const sendReminders = onCall(callableOptions, (request) =>
+  sendRemindersHandler(request, { timeZone: MAIL_TIMEZONE.value() })
+)
 
 // Every new exam result queues two emails in `mail/`, which the "Trigger
 // Email from Firestore" extension picks up and sends over SMTP: a

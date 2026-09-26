@@ -9,6 +9,7 @@ import {
   deleteDoc,
   writeBatch,
   serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -17,6 +18,8 @@ const QUESTIONS = 'questions'
 
 // Number of questions drawn for an attempt when an exam doesn't have its
 // own questionCount set yet (exams created before this field existed).
+// Keep in sync with DEFAULT_QUESTION_COUNT in functions/attempts.js, which
+// does the actual drawing.
 export const DEFAULT_QUESTION_COUNT = 50
 
 export async function listActiveExams() {
@@ -52,6 +55,40 @@ export async function updateExamDomains(examId, allowedDomains) {
 
 export async function updateExamQuestionCount(examId, questionCount) {
   await updateDoc(doc(db, EXAMS, examId), { questionCount: Number(questionCount) })
+}
+
+// Optional window in which the exam can be started. `from` / `until` are
+// Dates, or null for no limit on that side.
+export async function updateExamAvailability(examId, from, until) {
+  await updateDoc(doc(db, EXAMS, examId), {
+    availableFrom: from ? Timestamp.fromDate(from) : null,
+    availableUntil: until ? Timestamp.fromDate(until) : null,
+  })
+}
+
+// 'upcoming' (availableFrom still ahead), 'closed' (availableUntil passed)
+// or 'open'. Missing fields mean no limit. startAttempt in functions/ applies
+// the same check server-side; this is only for display.
+export function availabilityState(exam, nowMs = Date.now()) {
+  const from = toMillis(exam.availableFrom)
+  const until = toMillis(exam.availableUntil)
+  if (from != null && nowMs < from) return 'upcoming'
+  if (until != null && nowMs >= until) return 'closed'
+  return 'open'
+}
+
+export function toMillis(ts) {
+  if (ts == null) return null
+  if (typeof ts.toMillis === 'function') return ts.toMillis()
+  const ms = new Date(ts).getTime()
+  return Number.isNaN(ms) ? null : ms
+}
+
+export function formatDateTime(ts) {
+  const ms = toMillis(ts)
+  return ms == null
+    ? ''
+    : new Date(ms).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 export async function setExamActive(examId, active) {
@@ -127,30 +164,4 @@ export async function updateQuestion(questionId, question) {
 
 export async function deleteQuestion(questionId) {
   await deleteDoc(doc(db, QUESTIONS, questionId))
-}
-
-// Unbiased (Fisher–Yates) shuffle; returns a new array.
-function shuffle(items) {
-  const a = [...items]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
-// Picks up to `count` random questions from the exam's pool, each with its
-// own random `optionOrder`: display position -> original option index.
-// `options` and `correctIndex` stay in original order, so answers are
-// recorded (and graded, and shown to admins) against the original indices.
-export function pickRandomQuestions(pool, count = 50) {
-  return shuffle(pool)
-    .slice(0, Math.min(count, pool.length))
-    .map((q) => ({ ...q, optionOrder: shuffle(q.options.map((_, i) => i)) }))
-}
-
-// Display order for a drawn question. Attempts saved before options were
-// shuffled have no optionOrder and keep the original order.
-export function optionOrderOf(question) {
-  return question.optionOrder ?? question.options.map((_, i) => i)
 }

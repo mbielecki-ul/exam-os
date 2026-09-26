@@ -9,6 +9,7 @@ on:
     paths:
       - firestore.rules
       - firebase.json
+      - functions/scripts/seed-admins.js
       - .github/workflows/deploy-firestore-rules.yml
   workflow_dispatch:
 
@@ -28,9 +29,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
 
       - run: npm install -g firebase-tools@13
+
+      # firebase-admin for the seed script below.
+      - run: npm ci
+        working-directory: functions
 
       # firebase-tools reads GOOGLE_APPLICATION_CREDENTIALS as a path to a
       # service-account key file, so materialise the secret to disk first.
@@ -39,6 +46,15 @@ jobs:
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # The rules read the admin list from config/admins; make sure it exists
+      # before they go live. A failure here stops the deploy (safer than
+      # rules nobody can administer).
+      - name: Seed admin list
+        run: node functions/scripts/seed-admins.js
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-sa.json
 
       - name: Deploy rules
         run: firebase deploy --only firestore:rules --project "$FIREBASE_PROJECT_ID" --non-interactive

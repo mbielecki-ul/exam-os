@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { listAllExams, listQuestions } from '../lib/exams'
 import { listResultsForExam, summarizeExamResults, deleteResult, PASS_THRESHOLD } from '../lib/results'
 import ExamBarChart from '../components/ExamBarChart'
+import ExamParticipants from '../components/ExamParticipants'
 
 const PASS_COLOR = '#5fd0a3'
 const FAIL_COLOR = '#e5786d'
@@ -143,6 +144,8 @@ export default function AdminExamStats() {
       {stats.attendees === 0 && (
         <p className="muted">No one has attended this exam yet.</p>
       )}
+
+      {exam && <ExamParticipants exam={exam} results={results} />}
 
       {stats.attendees > 0 && (
         <div className="chart-grid">

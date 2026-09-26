@@ -2,13 +2,16 @@
 
 Internal employee knowledge-exam tool. Employees log in with just their
 email (magic link, no password), pick an exam, and answer 50 randomly
-drawn multiple-choice questions. The admin account sees every result —
-score, time taken, timestamp — and manages exams and question pools
-through the UI (CSV/JSON upload, no git required).
+drawn multiple-choice questions. Admins see every result — score, time
+taken, timestamp — manage exams and question pools through the UI
+(CSV/Excel/JSON upload, no git required), track who has completed an exam
+and send reminders.
 
-Runs entirely on free tiers: React + Vite frontend on **GitHub Pages**,
-**Firebase Authentication** (email link) + **Firestore** (Spark/free plan)
-as the backend. No server, no paid plan, no credit card required.
+React + Vite frontend on **GitHub Pages**, **Firebase Authentication**
+(email link) + **Firestore** as the backend, and a few **Cloud Functions**
+that draw and grade exam attempts (so the correct answers never reach the
+browser) and queue emails. Cloud Functions need the Firebase **Blaze**
+plan; at this volume it stays inside the free allowance.
 
 ## One-time setup
 
@@ -37,12 +40,15 @@ firebase login
 firebase deploy --only firestore:rules --project <your-project-id>
 ```
 
-This applies `firestore.rules`, which hardcodes `maximilian.bielecki@ul.com`,
-`max@bielecki.at`, and `thomas.reznicek@ul.com` as the only admin
-identities able to write exams/questions and read all results. If you ever
-need another admin, add another entry to the list in the `isAdmin()`
-function in that file **and** to `ADMIN_EMAILS` in `src/lib/firebase.js` —
-the two lists must match.
+**Admins** are the email addresses in the Firestore document
+`config/admins` (field `emails`). The rules workflow creates it once, with
+the three original admins, before deploying the rules
+(`functions/scripts/seed-admins.js`, which never overwrites an existing
+list). After that, admins manage the list in the app under **Admin →
+Admins**. Nobody can remove themselves there, so the list can't end up
+empty. Break-glass: edit `config/admins` in the Firebase console
+(Firestore → `config` → `admins`). If you deploy the rules by hand as
+above, create that document first, or nobody will be an admin.
 
 ### 3. Enable GitHub Pages
 
@@ -88,23 +94,72 @@ git push origin main
 The Actions tab will show the deploy running; once green, the app is live
 at `https://mbielecki-ul.github.io/exam-os/`.
 
-### 6. (Optional) Result emails
+### 6. Cloud Functions (exam attempts, emails)
+
+`functions/` holds four functions, deployed by
+`.github/workflows/deploy-functions.yml` whenever `functions/` changes on
+`main` (or by hand from the Actions tab):
+
+- `startAttempt` / `submitAttempt`: draw an attempt's questions and grade
+  it server-side. **Required**: without them no exam can be taken.
+- `emailResultOnCreate`: result emails (see step 7).
+- `sendReminders`: reminder emails to assigned participants (step 7).
+
+This needs the Firebase **Blaze** plan. At this volume it stays within the
+free allowance; set a budget alert anyway (Google Cloud Console → Billing →
+Budgets & alerts, e.g. €1).
+
+One-time setup:
+
+1. **GitHub repository variables** (Settings → Secrets and variables →
+   Actions → *Variables* tab):
+   - `FUNCTIONS_REGION`: the region matching your Firestore database
+     (`us-central1` for `nam5`, `europe-west1` for `eur3`, or the
+     database's own region if single-region). Default `us-central1`. The
+     Pages build uses the same variable, so the app calls the functions
+     where they run.
+   - `MAIL_TIMEZONE` (optional): e.g. `Europe/Vienna` for times in emails.
+     Default UTC.
+2. **Deploy permissions**: the service account in `FIREBASE_SERVICE_ACCOUNT`
+   needs these extra roles (Google Cloud Console → IAM → edit that service
+   account): *Cloud Functions Admin*, *Cloud Run Admin*, *Artifact
+   Registry Administrator*, *Eventarc Admin*, and *Service Account User*
+   (on the project, or at least on the Compute Engine default service
+   account `<project-number>-compute@developer.gserviceaccount.com`).
+3. **Service agents** (Firestore-triggered functions, first deploy only),
+   in the project that matches `FIREBASE_PROJECT_ID` (check the project
+   number on the Firebase project settings page):
+   - `service-<project-number>@gcp-sa-pubsub.iam.gserviceaccount.com` →
+     *Service Account Token Creator*
+   - `<project-number>-compute@developer.gserviceaccount.com` → *Cloud Run
+     Invoker* and *Eventarc Event Receiver*
+4. **Cloud Billing API** enabled for the project (APIs & Services →
+   Library → "Cloud Billing API"). The deploy checks the Blaze plan
+   through it.
+5. Run **Deploy Cloud Functions** once from the Actions tab.
+
+The deploy workflow also sets a cleanup policy for old function container
+images, since a non-interactive deploy fails without one.
+
+Company networks: the app calls the functions at
+`https://<region>-<project-id>.cloudfunctions.net/…`. If a web filter
+blocks that host, exams can't be started or submitted.
+
+### 7. (Optional) Emails: results and reminders
 
 Every finished exam (manual finish, timeout, or leaving mid-exam) sends two
 emails: a notification with the participant's address and their result to
 the admin address(es) in `RESULT_EMAIL_TO`, and a copy of the result to
-the participant themselves (Passed in green, Failed in red). It's sent server-side, not from the participant's browser,
-so company web filters can't block it and participants can't fake it:
+the participant themselves (Passed in green, Failed in red). Admins can
+also send reminder emails from an exam's **Overview** page. All mail is
+sent server-side, not from a browser, so company web filters can't block
+it and participants can't fake it:
 
-1. The browser saves the result to Firestore as usual.
-2. The Cloud Function `emailResultOnCreate` (`functions/index.js`) fires
-   on every new result and writes both emails into the `mail` collection.
-3. Firebase's **Trigger Email from Firestore** extension sends it over
-   SMTP and records the delivery status on that `mail` document.
-
-This needs the Firebase **Blaze** plan (Cloud Functions). At this volume
-it stays within the free allowance; set a budget alert anyway (Google
-Cloud Console → Billing → Budgets & alerts, e.g. €1).
+1. `submitAttempt` writes the result, or an admin clicks "Send reminder".
+2. `emailResultOnCreate` (on every new result) or `sendReminders` writes
+   the emails into the `mail` collection.
+3. Firebase's **Trigger Email from Firestore** extension sends them over
+   SMTP and records the delivery status on each `mail` document.
 
 One-time setup:
 
@@ -112,26 +167,15 @@ One-time setup:
    Verification and create an **app password** at
    <https://myaccount.google.com/apppasswords>.
 2. **Install the extension**: Firebase console → Extensions → *Trigger
-   Email from Firestore*. Use the Firestore database's region, auth type
-   *Username & Password*, SMTP URI `smtps://you@gmail.com@smtp.gmail.com:465`,
-   the app password, email documents collection **`mail`**, and a default
-   FROM address such as `exam-os <you@gmail.com>`.
-3. **GitHub secret** `RESULT_EMAIL_TO`: who receives the emails
-   (comma-separated for several).
-4. **GitHub repository variables** (same settings page, *Variables* tab):
-   - `FUNCTIONS_REGION`: the region matching your Firestore database
-     (`us-central1` for `nam5`, `europe-west1` for `eur3`, or the
-     database's own region if single-region). Default `us-central1`.
-   - `MAIL_TIMEZONE` (optional): e.g. `Europe/Vienna` for the "Submitted
-     at" time. Default UTC.
-5. **Deploy permissions**: the service account in `FIREBASE_SERVICE_ACCOUNT`
-   deploys the function via `.github/workflows/deploy-functions.yml` and
-   needs these extra roles (Google Cloud Console → IAM → edit that
-   service account): *Cloud Functions Admin*, *Cloud Run Admin*,
-   *Service Account User*, *Artifact Registry Administrator*,
-   *Eventarc Admin*.
-6. Run **Deploy Cloud Functions** once from the Actions tab (it also runs
-   automatically whenever `functions/` changes on `main`).
+   Email from Firestore*. *Firestore Instance Location* must be the
+   database's location exactly as shown under Firestore (e.g. `eur3`, not
+   a region inside it), and the functions location the same region as
+   `FUNCTIONS_REGION`. Auth type *Username & Password*, SMTP URI
+   `smtps://you@gmail.com@smtp.gmail.com:465`, the app password, email
+   documents collection **`mail`**, and a default FROM address such as
+   `exam-os <you@gmail.com>`.
+3. **GitHub secret** `RESULT_EMAIL_TO`: who receives the result
+   notifications (comma-separated for several).
 
 Troubleshooting: every queued email is a document in the `mail`
 collection (Firebase console → Firestore). Its `delivery.state` shows
@@ -144,11 +188,16 @@ no `mail` document at all for a result, check the function's logs
 - **Employees**: open the URL, enter their email, click the link Firebase
   emails them (valid roughly 1 hour — this is a Firebase-controlled limit,
   not configurable), then pick an exam. **Each exam can only be taken once
-  per person** — this is enforced in `firestore.rules`, not just hidden in
-  the UI, so it can't be bypassed by re-visiting the URL. An admin can lift
-  this for one specific person from the admin pages (see below).
-- **Admin** (`maximilian.bielecki@ul.com`, `max@bielecki.at`, or `thomas.reznicek@ul.com`): after logging in the same way,
-  an **Admin** link appears in the nav. From there:
+  per person**. The server enforces this, not just the UI, so it can't be
+  bypassed by re-visiting the URL. An admin can lift it for one specific
+  person from the admin pages (see below). The timer runs on server time;
+  a reload or dropped connection resumes the same attempt, and answers
+  are saved as they're given, so an attempt whose time runs out while the
+  page is closed is graded on what was answered in time.
+- **Admins** (everyone on the list in **Admin → Admins**): after logging
+  in the same way, an **Admin** link appears in the nav. From there:
+  - **Admins**: add or remove admins (changes apply at their next
+    sign-in). You can't remove yourself.
   - **Results**: every submitted result, filterable by exam — the filter
     also drives two bar charts above the table (Attended/Passed/Failed and
     Correct/Wrong answers), so switching the exam dropdown updates the
@@ -171,8 +220,11 @@ no `mail` document at all for a result, check the function's logs
     unanswered question counts as incorrect), optionally restrict an exam
     to specific email domains (e.g. `ul.com`) — leave empty for open to
     everyone; restricted exams are hidden from the list for anyone outside
-    the allowed domains and blocked server-side in `firestore.rules` too,
-    not just hidden in the UI, activate/deactivate
+    the allowed domains and refused server-side too, not just hidden in
+    the UI, optionally set an **availability window** (available from /
+    until, either side optional): outside it employees see when the exam
+    opens or that it's closed, and the server refuses to start it (an
+    attempt already running may still finish), activate/deactivate
     them, and upload question pools as CSV, Excel (`.xlsx`), or JSON —
     sample files in each format are downloadable from the "File format"
     card on the same page (also in the repo as `public/sample-questions.csv`
@@ -196,13 +248,22 @@ no `mail` document at all for a result, check the function's logs
     stay in the database but are hidden from the Results page by default.
     Nothing is deleted: its **View overview** page still works, and
     **Unarchive** brings it back (inactive; activate it again if it should
-    be open for new attempts). `firestore.rules` also rejects new results
-    for archived exams, so a stale open tab can't submit to one.
+    be open for new attempts). The server also rejects attempts at archived
+    exams, so a stale open tab can't submit to one.
   - **View overview** (per exam, from the exams list): attendee count,
     total correct/wrong answers across everyone, how many passed vs.
     failed (pass threshold is 66% correct, see `PASS_THRESHOLD` in
     `src/lib/results.js`), bar charts for attendance/pass-rate and
     correct-vs-wrong answers, and a per-attendee breakdown table.
+    **Participants** on the same page: paste (or import from a CSV, text
+    or Excel file) the email addresses of everyone who should take the
+    exam, then see per person whether they've completed it (with score),
+    are in progress, or haven't started. **Send reminder** emails everyone
+    who hasn't completed it (or one person via **Remind**); the email
+    links to exam-os and mentions the "available until" date if set. The
+    time of each person's last reminder is shown. Reminders need the exam
+    to be active, and never go to someone who already has a result or
+    isn't on the list.
   - **Manage questions** (per exam, from the exams list): view every
     question one by one, filter by category, edit a question's text,
     options, correct answer, or category in place, add a single question
@@ -242,10 +303,7 @@ npm run dev
   questions in the browser's developer tools.
 - **Magic link expiry** is fixed by Firebase (~1 hour), not exactly
   configurable to a specific number of hours.
-- **Grading happens in the browser**, so a technically curious employee
-  could inspect network traffic and see `correctIndex` for the questions
-  in their attempt. Fine for a low-stakes internal knowledge check; not
-  suitable for a proctored/high-stakes exam without adding a server-side
-  grading step later (would require Firebase's paid Blaze plan for Cloud
-  Functions, which stays free at this scale but does require a credit card
-  on file).
+- **Grading is server-side**: the browser only ever receives the question
+  text and options, never the correct answers, and the score comes from
+  `submitAttempt`. Participants still see the questions, so they can
+  write them down (see the copy deterrent above).

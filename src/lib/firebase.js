@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getFunctions } from 'firebase/functions'
 
 // These values are the public Firebase "web app" identifiers — they are not
 // secrets (security is enforced by Firestore rules), but we still inject
@@ -17,6 +18,9 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+// Must match where functions/ is deployed (the FUNCTIONS_REGION repo
+// variable feeds both; us-central1 is the default on both sides).
+export const functions = getFunctions(app, import.meta.env.VITE_FUNCTIONS_REGION || 'us-central1')
 
 // Session-only persistence: sign-in doesn't survive closing the tab/browser.
 // Several core-ops exams are taken from shared shift/control-room terminals,
@@ -24,6 +28,3 @@ export const db = getFirestore(app)
 // the next person on the same machine silently inherit the previous
 // employee's signed-in session.
 setPersistence(auth, browserSessionPersistence)
-
-// Hardcoded admin email — kept in one place, also mirrored in firestore.rules.
-export const ADMIN_EMAILS = ['maximilian.bielecki@ul.com', 'max@bielecki.at', 'thomas.reznicek@ul.com']

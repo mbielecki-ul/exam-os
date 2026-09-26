@@ -18,6 +18,8 @@ const QUESTIONS = 'questions'
 
 // Number of questions drawn for an attempt when an exam doesn't have its
 // own questionCount set yet (exams created before this field existed).
+// Keep in sync with DEFAULT_QUESTION_COUNT in functions/attempts.js, which
+// does the actual drawing.
 export const DEFAULT_QUESTION_COUNT = 50
 
 export async function listActiveExams() {
@@ -162,30 +164,4 @@ export async function updateQuestion(questionId, question) {
 
 export async function deleteQuestion(questionId) {
   await deleteDoc(doc(db, QUESTIONS, questionId))
-}
-
-// Unbiased (Fisher–Yates) shuffle; returns a new array.
-function shuffle(items) {
-  const a = [...items]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
-// Picks up to `count` random questions from the exam's pool, each with its
-// own random `optionOrder`: display position -> original option index.
-// `options` and `correctIndex` stay in original order, so answers are
-// recorded (and graded, and shown to admins) against the original indices.
-export function pickRandomQuestions(pool, count = 50) {
-  return shuffle(pool)
-    .slice(0, Math.min(count, pool.length))
-    .map((q) => ({ ...q, optionOrder: shuffle(q.options.map((_, i) => i)) }))
-}
-
-// Display order for a drawn question. Attempts saved before options were
-// shuffled have no optionOrder and keep the original order.
-export function optionOrderOf(question) {
-  return question.optionOrder ?? question.options.map((_, i) => i)
 }

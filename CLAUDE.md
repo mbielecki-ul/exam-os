@@ -165,6 +165,12 @@ Changing the rule for who may take a restricted exam means editing both.
   and manual finish are three ways into one submit function. If you touch
   `handleSubmit`, check all three call sites still make sense. Unanswered
   questions resolve to `selectedIndex = -1` and count as incorrect.
+- Copy deterrent: while questions are on screen, an effect blocks
+  `copy`/`cut`/`contextmenu`/`dragstart` and Ctrl/Cmd+C/X/A/P/S on
+  `document` (with a short `.copy-notice`). `.exam-no-copy` disables text
+  selection, and `@media print` hides the exam in favour of
+  `.print-block-notice`. It's deliberately only a deterrent (screenshots
+  and devtools can't be stopped); don't sell it as more.
 - The browser sends no email. The `emailResultOnCreate` Cloud Function
   reacts to the new result document (see "Result emails").
 - `ExamGuardContext` intercepts in-app navigation (nav bar, sign out) with

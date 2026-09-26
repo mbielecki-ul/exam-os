@@ -231,6 +231,12 @@ npm run dev
   needs extra history-manipulation plumbing that felt like overkill for an
   internal tool. Test each of these paths once when adding a new exam if
   this matters to you operationally.
+- **Copy protection during an exam is a deterrent, not a guarantee.** On
+  the exam screen, text can't be selected, and copy/cut, right-click,
+  dragging text and Ctrl/Cmd+C/X/A/P/S are blocked (a short notice says
+  so). Printing shows only "Printing is disabled during the exam." A web
+  page can't stop screenshots, a phone camera, or someone reading the
+  questions in the browser's developer tools.
 - **Magic link expiry** is fixed by Firebase (~1 hour), not exactly
   configurable to a specific number of hours.
 - **Grading happens in the browser**, so a technically curious employee

@@ -35,6 +35,9 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          # Same repo variable the functions deploy uses, so the app calls
+          # startAttempt/submitAttempt where they actually run.
+          VITE_FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

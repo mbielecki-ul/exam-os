@@ -6,7 +6,7 @@
     {
       "source": "functions",
       "codebase": "default",
-      "ignore": ["node_modules", ".git", "*.local", ".env.example"]
+      "ignore": ["node_modules", ".git", "*.local", ".env.example", "scripts"]
     }
   ]
 }

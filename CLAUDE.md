@@ -265,6 +265,12 @@ Details:
   does get its own.
 - `mail` is locked in `firestore.rules` (`allow read, write: if false`).
   Only the Admin SDK writes there.
+- Every mail doc gets `from: "ExamOs <MAIL_FROM_ADDRESS>"` via `mailFrom()`
+  (`functions/email.js`, `MAIL_SENDER_NAME`). `MAIL_FROM_ADDRESS` is a
+  function param written to `functions/.env` from the GitHub secret of the
+  same name; empty = the extension's default FROM. New mail types must
+  pass `from` too. Firebase Auth's sign-in emails are separate (sender
+  name set in the Firebase console).
 - Reminders: `sendReminders` (`functions/reminders.js`, admin-only
   callable, checks `config/admins`) queues one `mail` doc per assigned
   participant without a result, using `buildReminderEmail()`, and records

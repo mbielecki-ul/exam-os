@@ -176,6 +176,16 @@ One-time setup:
    `exam-os <you@gmail.com>`.
 3. **GitHub secret** `RESULT_EMAIL_TO`: who receives the result
    notifications (comma-separated for several).
+4. **GitHub secret** `MAIL_FROM_ADDRESS`: the sending mailbox (the SMTP
+   login from step 1). Every result and reminder email is sent as
+   **ExamOs** `<that address>` (`MAIL_SENDER_NAME` in `functions/email.js`).
+   Without it, the extension's default FROM is used. Run **Deploy Cloud
+   Functions** after adding or changing it.
+
+The Firebase sign-in link emails don't go through the extension. Set their
+sender name in the Firebase console: **Authentication → Templates** →
+edit a template (the pencil icon) → **Sender name** `ExamOs`. It applies to
+all of Firebase's auth emails.
 
 Troubleshooting: every queued email is a document in the `mail`
 collection (Firebase console → Firestore). Its `delivery.state` shows

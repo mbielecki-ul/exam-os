@@ -3,6 +3,17 @@
 export const PASS_THRESHOLD = 0.66
 
 const APP_ROOT = 'https://mbielecki-ul.github.io/exam-os/'
+
+// Sender name on every email exam-os sends (results and reminders).
+export const MAIL_SENDER_NAME = 'ExamOs'
+
+// "From" for a mail document: the sender name with the sending mailbox's
+// address (the MAIL_FROM_ADDRESS param). Without an address the Trigger
+// Email extension's default FROM is used, so this returns undefined.
+export function mailFrom(address) {
+  const trimmed = (address || '').trim()
+  return trimmed ? `${MAIL_SENDER_NAME} <${trimmed}>` : undefined
+}
 const APP_URL = `${APP_ROOT}admin`
 
 // Builds { subject, text, html } for one result document.

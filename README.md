@@ -176,6 +176,16 @@ One-time setup:
    `exam-os <you@gmail.com>`.
 3. **GitHub secret** `RESULT_EMAIL_TO`: who receives the result
    notifications (comma-separated for several).
+4. **GitHub secret** `MAIL_FROM_ADDRESS`: the sending mailbox (the SMTP
+   login from step 1). Every result and reminder email is sent as
+   **ExamOs** `<that address>` (`MAIL_SENDER_NAME` in `functions/email.js`).
+   Without it, the extension's default FROM is used. Run **Deploy Cloud
+   Functions** after adding or changing it.
+
+The Firebase sign-in link emails don't go through the extension. Set their
+sender name in the Firebase console: **Authentication → Templates** →
+edit a template (the pencil icon) → **Sender name** `ExamOs`. It applies to
+all of Firebase's auth emails.
 
 Troubleshooting: every queued email is a document in the `mail`
 collection (Firebase console → Firestore). Its `delivery.state` shows
@@ -267,7 +277,11 @@ no `mail` document at all for a result, check the function's logs
   - **Manage questions** (per exam, from the exams list): view every
     question one by one, filter by category, edit a question's text,
     options, correct answer, or category in place, add a single question
-    manually, or delete one — no re-upload needed for small fixes. An
+    manually, or delete one — no re-upload needed for small fixes. The
+    category field suggests the exam's existing categories as you type
+    (arrow keys + Enter or a click to pick). A different case or stray
+    spaces ("safety ") are saved as the existing category ("Safety"), and a
+    hint says when a name would create a new category. An
     "Export to Excel" button downloads every question in that exam's pool
     as a single `.xlsx` file, using the same columns as upload
     (`question,option1,option2,option3,option4,correctOption,category`),

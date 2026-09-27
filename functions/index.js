@@ -4,7 +4,7 @@ import { defineString } from 'firebase-functions/params'
 import { logger } from 'firebase-functions'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
-import { buildResultEmail } from './email.js'
+import { buildResultEmail, mailFrom } from './email.js'
 import { startAttempt as startAttemptHandler, submitAttempt as submitAttemptHandler } from './attempts.js'
 import { sendReminders as sendRemindersHandler } from './reminders.js'
 
@@ -12,6 +12,9 @@ import { sendReminders as sendRemindersHandler } from './reminders.js'
 // GitHub secrets/variables (see .github/workflows/deploy-functions.yml).
 const RESULT_EMAIL_TO = defineString('RESULT_EMAIL_TO', { default: '' })
 const MAIL_TIMEZONE = defineString('MAIL_TIMEZONE', { default: 'UTC' })
+// The sending mailbox (the SMTP account the extension logs in with). Every
+// email goes out as "ExamOs <MAIL_FROM_ADDRESS>".
+const MAIL_FROM_ADDRESS = defineString('MAIL_FROM_ADDRESS', { default: '' })
 // Must match the Firestore database location (e.g. us-central1 for nam5,
 // europe-west1 for eur3).
 const FUNCTIONS_REGION = defineString('FUNCTIONS_REGION', { default: 'us-central1' })
@@ -25,7 +28,10 @@ export const startAttempt = onCall(callableOptions, startAttemptHandler)
 export const submitAttempt = onCall(callableOptions, submitAttemptHandler)
 // Admin-only: reminder emails to assigned participants who haven't finished.
 export const sendReminders = onCall(callableOptions, (request) =>
-  sendRemindersHandler(request, { timeZone: MAIL_TIMEZONE.value() })
+  sendRemindersHandler(request, {
+    timeZone: MAIL_TIMEZONE.value(),
+    from: mailFrom(MAIL_FROM_ADDRESS.value()),
+  })
 )
 
 // Every new exam result queues two emails in `mail/`, which the "Trigger
@@ -44,6 +50,7 @@ export const emailResultOnCreate = onDocumentCreated(
     const result = snap.data()
     const data = { ...result, submittedAtMs: result.submittedAt?.toMillis?.() ?? Date.parse(event.time) }
     const timeZone = MAIL_TIMEZONE.value()
+    const from = mailFrom(MAIL_FROM_ADDRESS.value())
 
     const adminTo = RESULT_EMAIL_TO.value()
       .split(',')
@@ -54,7 +61,7 @@ export const emailResultOnCreate = onDocumentCreated(
         to: adminTo,
         replyTo: result.userEmail,
         message: buildResultEmail(data, { timeZone, audience: 'admin' }),
-      })
+      }, from)
     } else {
       logger.warn('RESULT_EMAIL_TO is not set; no admin notification queued.')
     }
@@ -63,7 +70,7 @@ export const emailResultOnCreate = onDocumentCreated(
       await queueMail(`${event.id}-participant`, {
         to: [result.userEmail],
         message: buildResultEmail(data, { timeZone, audience: 'participant' }),
-      })
+      }, from)
     }
   }
 )
@@ -72,9 +79,12 @@ export const emailResultOnCreate = onDocumentCreated(
 // delivery of the same event can't queue (or overwrite and re-send) an
 // email twice. A retaken exam reuses the result ID but is a new event, so
 // it gets its own emails.
-async function queueMail(id, doc) {
+async function queueMail(id, doc, from) {
   try {
-    await getFirestore().collection('mail').doc(id).create(doc)
+    await getFirestore()
+      .collection('mail')
+      .doc(id)
+      .create(from ? { ...doc, from } : doc)
   } catch (err) {
     if (err.code === 6 /* ALREADY_EXISTS */) return
     throw err

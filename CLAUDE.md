@@ -231,6 +231,11 @@ thrown.
 - `normalize()` requires non-empty text and exactly 4 non-empty options.
 - Writes go through `addQuestions()` in `src/lib/exams.js`, which chunks
   at 400 per `writeBatch` (Firestore's hard cap is 500).
+- Manual add/edit (`AdminQuestionEditor.jsx`) uses `CategoryInput`
+  (`src/components/CategoryInput.jsx`), a custom autocomplete over the
+  exam's existing categories (not `<datalist>`, which can't be themed).
+  `canonicalCategory()` snaps case/space variants to the existing spelling
+  on save; uploads are not normalised.
 
 ### Adding a new admin-configurable exam property
 The pattern used for `timeLimitMinutes`, `allowedDomains`, and
@@ -260,6 +265,12 @@ Details:
   does get its own.
 - `mail` is locked in `firestore.rules` (`allow read, write: if false`).
   Only the Admin SDK writes there.
+- Every mail doc gets `from: "ExamOs <MAIL_FROM_ADDRESS>"` via `mailFrom()`
+  (`functions/email.js`, `MAIL_SENDER_NAME`). `MAIL_FROM_ADDRESS` is a
+  function param written to `functions/.env` from the GitHub secret of the
+  same name; empty = the extension's default FROM. New mail types must
+  pass `from` too. Firebase Auth's sign-in emails are separate (sender
+  name set in the Firebase console).
 - Reminders: `sendReminders` (`functions/reminders.js`, admin-only
   callable, checks `config/admins`) queues one `mail` doc per assigned
   participant without a result, using `buildReminderEmail()`, and records

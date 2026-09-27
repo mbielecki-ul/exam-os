@@ -8,6 +8,7 @@ import {
   deleteQuestion,
 } from '../lib/exams'
 import { exportQuestionsToXlsx } from '../lib/parseQuestions'
+import CategoryInput from '../components/CategoryInput'
 
 const EMPTY_FORM = { text: '', options: ['', '', '', ''], correctIndex: 0, category: '' }
 
@@ -91,7 +92,7 @@ export default function AdminQuestionEditor() {
       text: form.text.trim(),
       options: form.options.map((o) => o.trim()),
       correctIndex: Number(form.correctIndex),
-      category: form.category.trim() || 'Uncategorized',
+      category: canonicalCategory(form.category, categories),
     }
     try {
       if (editingId === 'new') {
@@ -157,6 +158,7 @@ export default function AdminQuestionEditor() {
           saving={saving}
           onSave={handleSave}
           onCancel={cancelEdit}
+          categories={categories}
           saveLabel="Add question"
         />
       )}
@@ -172,6 +174,7 @@ export default function AdminQuestionEditor() {
               saving={saving}
               onSave={handleSave}
               onCancel={cancelEdit}
+              categories={categories}
               saveLabel="Save changes"
             />
           ) : (
@@ -202,7 +205,7 @@ export default function AdminQuestionEditor() {
   )
 }
 
-function QuestionForm({ form, setForm, error, saving, onSave, onCancel, saveLabel }) {
+function QuestionForm({ form, setForm, error, saving, onSave, onCancel, categories, saveLabel }) {
   function setOption(idx, value) {
     const options = [...form.options]
     options[idx] = value
@@ -222,10 +225,10 @@ function QuestionForm({ form, setForm, error, saving, onSave, onCancel, saveLabe
 
       <label className="field-label">
         Category
-        <input
+        <CategoryInput
           value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
-          placeholder="e.g. Networking"
+          onChange={(category) => setForm((f) => ({ ...f, category }))}
+          categories={categories}
         />
       </label>
 
@@ -259,4 +262,13 @@ function QuestionForm({ form, setForm, error, saving, onSave, onCancel, saveLabe
       </div>
     </div>
   )
+}
+
+// Saved category name: empty -> "Uncategorized", and a case/spacing variant
+// of an existing category ("networking ") -> that category's spelling.
+function canonicalCategory(value, categories) {
+  const trimmed = value.trim()
+  if (!trimmed) return 'Uncategorized'
+  const existing = categories.find((c) => c.name.toLowerCase() === trimmed.toLowerCase())
+  return existing ? existing.name : trimmed
 }

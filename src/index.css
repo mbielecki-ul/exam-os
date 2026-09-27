@@ -735,3 +735,47 @@ input, select {
   margin-bottom: 0.5rem;
   box-sizing: border-box;
 }
+
+.category-combobox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.category-options {
+  position: absolute;
+  top: 2.6rem;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 14rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.category-option {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.category-option-active {
+  background: var(--bg);
+  color: var(--accent);
+}
+
+.category-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}

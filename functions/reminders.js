@@ -12,7 +12,7 @@ import { caller } from './attempts.js'
 // One Firestore batch: 500 writes, minus the assignment update.
 const MAX_RECIPIENTS = 450
 
-export async function sendReminders(request, { timeZone }) {
+export async function sendReminders(request, { timeZone, from }) {
   const { email } = caller(request)
   const db = getFirestore()
 
@@ -57,7 +57,7 @@ export async function sendReminders(request, { timeZone }) {
   const batch = db.batch()
   const reminded = []
   for (const to of recipients) {
-    batch.create(db.collection('mail').doc(), { to: [to], message })
+    batch.create(db.collection('mail').doc(), from ? { to: [to], from, message } : { to: [to], message })
     // FieldPath, because the email's dots would otherwise split the path.
     reminded.push(new FieldPath('reminders', to), now)
   }

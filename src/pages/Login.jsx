@@ -1,22 +1,30 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
 } from 'firebase/auth'
 import { auth } from '../lib/firebase'
+import { useAuth } from '../context/AuthContext'
 
 const STORAGE_KEY = 'examos-email-for-signin'
 
 export default function Login() {
-  const navigate = useNavigate()
+  const { user, loading } = useAuth()
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle') // idle | sending | sent | completing | error
   const [error, setError] = useState('')
 
-  // If the user arrived by clicking the emailed link, finish sign-in.
+  // Completing the emailed link must run only once (StrictMode runs
+  // effects twice in dev, and a used link can't be redeemed again).
+  const completingRef = useRef(false)
+
+  // If the user arrived by clicking the emailed link, finish sign-in. Waits
+  // for AuthContext to settle first, and skips it for someone who is
+  // already signed in (the redirect below takes them to the exams).
   useEffect(() => {
+    if (loading || user || completingRef.current) return
     if (!isSignInWithEmailLink(auth, window.location.href)) return
 
     let storedEmail = window.localStorage.getItem(STORAGE_KEY)
@@ -27,21 +35,24 @@ export default function Login() {
     }
     if (!storedEmail) return
 
+    completingRef.current = true
     setStatus('completing')
     signInWithEmailLink(auth, storedEmail, window.location.href)
       .then(() => {
         window.localStorage.removeItem(STORAGE_KEY)
-        // Clean the sign-in params out of the URL, then leave the login page —
-        // nothing else here was navigating away, which is why sign-in could
-        // finish successfully but the screen stayed stuck on "Completing …".
+        // Clean the sign-in params out of the URL. No navigate() here: the
+        // user only counts as signed in once AuthContext has published them
+        // (after its admin check), and navigating before that bounced
+        // RequireAuth straight back to this page. The <Navigate> below
+        // fires as soon as the user is there.
         window.history.replaceState({}, document.title, window.location.pathname)
-        navigate('/', { replace: true })
       })
       .catch((err) => {
+        completingRef.current = false
         setStatus('error')
         setError(mapError(err))
       })
-  }, [navigate])
+  }, [loading, user])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -60,6 +71,11 @@ export default function Login() {
       setError(mapError(err))
     }
   }
+
+  // Signed in (just now, or already): go to the exam list.
+  if (user) return <Navigate to="/" replace />
+
+  if (loading) return <Shell><p>Loading …</p></Shell>
 
   if (status === 'completing') {
     return <Shell><p>Completing sign-in …</p></Shell>

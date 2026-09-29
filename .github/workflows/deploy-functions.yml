@@ -42,12 +42,14 @@ jobs:
         run: |
           {
             echo "RESULT_EMAIL_TO=$RESULT_EMAIL_TO"
+            echo "RESULT_EMAIL_CC=$RESULT_EMAIL_CC"
             echo "MAIL_FROM_ADDRESS=$MAIL_FROM_ADDRESS"
             echo "MAIL_TIMEZONE=${MAIL_TIMEZONE:-UTC}"
             echo "FUNCTIONS_REGION=${FUNCTIONS_REGION:-us-central1}"
           } > functions/.env
         env:
           RESULT_EMAIL_TO: ${{ secrets.RESULT_EMAIL_TO }}
+          RESULT_EMAIL_CC: ${{ secrets.RESULT_EMAIL_CC }}
           MAIL_FROM_ADDRESS: ${{ secrets.MAIL_FROM_ADDRESS }}
           MAIL_TIMEZONE: ${{ vars.MAIL_TIMEZONE }}
           FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}

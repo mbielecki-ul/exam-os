@@ -255,9 +255,11 @@ documents, and the Trigger Email extension sends them:
 - `mail/{event.id}`: the admin notification to `RESULT_EMAIL_TO`, with
   `replyTo` set to the participant.
 - `mail/{event.id}-participant`: the participant's own copy
-  (`audience: 'participant'`, no admin link). It's safe to send to
-  `userEmail` because the rules only accept a result whose `userEmail`
-  is the signer's own verified address.
+  (`audience: 'participant'`, no admin link), with `cc` from the
+  `RESULT_EMAIL_CC` param/secret (`participantCc()` in `functions/email.js`
+  drops the participant's own address and duplicates). It's safe to send to
+  `userEmail` because only `submitAttempt` writes results, using the
+  caller's verified auth email.
 
 Details:
 - `create()` with the event ID as doc ID keeps a repeated event delivery

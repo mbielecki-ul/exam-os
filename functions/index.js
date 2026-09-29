@@ -4,7 +4,7 @@ import { defineString } from 'firebase-functions/params'
 import { logger } from 'firebase-functions'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
-import { buildResultEmail, mailFrom } from './email.js'
+import { buildResultEmail, mailFrom, participantCc } from './email.js'
 import { startAttempt as startAttemptHandler, submitAttempt as submitAttemptHandler } from './attempts.js'
 import { sendReminders as sendRemindersHandler } from './reminders.js'
 
@@ -12,6 +12,8 @@ import { sendReminders as sendRemindersHandler } from './reminders.js'
 // GitHub secrets/variables (see .github/workflows/deploy-functions.yml).
 const RESULT_EMAIL_TO = defineString('RESULT_EMAIL_TO', { default: '' })
 const MAIL_TIMEZONE = defineString('MAIL_TIMEZONE', { default: 'UTC' })
+// CC'd on every participant's own result email (comma-separated).
+const RESULT_EMAIL_CC = defineString('RESULT_EMAIL_CC', { default: '' })
 // The sending mailbox (the SMTP account the extension logs in with). Every
 // email goes out as "ExamOs <MAIL_FROM_ADDRESS>".
 const MAIL_FROM_ADDRESS = defineString('MAIL_FROM_ADDRESS', { default: '' })
@@ -67,8 +69,10 @@ export const emailResultOnCreate = onDocumentCreated(
     }
 
     if (result.userEmail) {
+      const cc = participantCc(RESULT_EMAIL_CC.value(), result.userEmail)
       await queueMail(`${event.id}-participant`, {
         to: [result.userEmail],
+        ...(cc.length > 0 && { cc }),
         message: buildResultEmail(data, { timeZone, audience: 'participant' }),
       }, from)
     }

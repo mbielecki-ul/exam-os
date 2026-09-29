@@ -16,6 +16,23 @@ export function mailFrom(address) {
 }
 const APP_URL = `${APP_ROOT}admin`
 
+// Addresses to CC on the participant's own result email: a comma-separated
+// list (the RESULT_EMAIL_CC param), minus the participant themselves so
+// nobody gets the same email twice.
+export function participantCc(list, participantEmail) {
+  const self = (participantEmail || '').trim().toLowerCase()
+  const seen = new Set()
+  return (list || '')
+    .split(',')
+    .map((a) => a.trim())
+    .filter((a) => {
+      const key = a.toLowerCase()
+      if (!a || key === self || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
 // Builds { subject, text, html } for one result document.
 // `result.submittedAtMs` is the submission time in ms (the Firestore
 // Timestamp converted by the caller). `audience` is 'admin' (notification

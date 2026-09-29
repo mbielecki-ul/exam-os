@@ -176,18 +176,11 @@ One-time setup:
    `exam-os <you@gmail.com>`.
 3. **GitHub secret** `RESULT_EMAIL_TO`: who receives the result
    notifications (comma-separated for several).
-4. **GitHub secret** `RESULT_EMAIL_CC` (optional): CC'd on every
-   participant's own result email (comma-separated for several). Someone
-   on this list who takes an exam themselves isn't CC'd on their own
-   result. Unlike `RESULT_EMAIL_TO`'s separate notification, this is the
-   exact email the participant received.
-5. **GitHub secret** `MAIL_FROM_ADDRESS`: the sending mailbox (the SMTP
+4. **GitHub secret** `MAIL_FROM_ADDRESS`: the sending mailbox (the SMTP
    login from step 1). Every result and reminder email is sent as
    **ExamOs** `<that address>` (`MAIL_SENDER_NAME` in `functions/email.js`).
-   Without it, the extension's default FROM is used.
-
-After adding or changing any of these secrets, run **Deploy Cloud
-Functions** once from the Actions tab so the functions pick them up.
+   Without it, the extension's default FROM is used. Run **Deploy Cloud
+   Functions** after adding or changing it.
 
 The Firebase sign-in link emails don't go through the extension. Set their
 sender name in the Firebase console: **Authentication → Templates** →
